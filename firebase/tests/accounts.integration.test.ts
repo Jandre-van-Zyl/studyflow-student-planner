@@ -23,6 +23,8 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 import { ensureProfile, saveProfile, watchProfile } from '@/features/auth/profileService';
 import { defaultStudyBudgets, parseUserProfile } from '@/features/auth/profileValidation';
 import type { UserProfile } from '@/shared/types/planner';
+import { savePlannerRecord, watchPlanner } from '@/features/planner/plannerService';
+import { exampleView, type PlanningView } from '@/features/planner/planningView';
 
 let live: { app: FirebaseApp; auth: Auth; database: Firestore };
 vi.mock('@/lib/firebase/client', () => ({ getFirebaseServices: () => live }));
@@ -172,5 +174,104 @@ describe('real Auth/Firestore profile integration', () => {
       signInWithEmailAndPassword(live.auth, account.email!, 'incorrect-password'),
     ).rejects.toThrow();
     expect(live.auth.currentUser).toBeNull();
+  });
+});
+
+function observePlanner(uid: string) {
+  return new Promise<PlanningView>((resolve, reject) => {
+    let stop = () => {};
+    const timer = setTimeout(() => {
+      stop();
+      reject(new Error('Planner observation timed out'));
+    }, 10000);
+    stop = watchPlanner(
+      uid,
+      (data) => {
+        clearTimeout(timer);
+        stop();
+        resolve(data);
+      },
+      (error) => {
+        clearTimeout(timer);
+        stop();
+        reject(error);
+      },
+    );
+  });
+}
+describe('real planner persistence contract', () => {
+  it('saves linked records, observes/reloads them, detects stale edits, and preserves completion history', async () => {
+    const account = await createAccount();
+    await ensureProfile(account.uid, 'Planner owner');
+    const samples = exampleView();
+    const subject = await savePlannerRecord(account.uid, 'subjects', samples.subjects[0]!);
+    await savePlannerRecord(account.uid, 'classes', samples.classes[0]!);
+    const assessment = await savePlannerRecord(account.uid, 'assessments', samples.assessments[0]!);
+    const block = await savePlannerRecord(account.uid, 'blocks', samples.blocks[0]!);
+    const complete = await savePlannerRecord(account.uid, 'assessments', {
+      ...assessment,
+      status: 'Completed',
+      remainingMinutes: 0,
+    });
+    await savePlannerRecord(account.uid, 'assessments', {
+      ...complete,
+      description: 'Completed notes',
+    });
+    const completedRef = doc(live.database, 'users', account.uid, 'assessments', assessment.id);
+    const firstCompletion = (await getDocFromServer(completedRef)).data()!.completedAt;
+    await savePlannerRecord(account.uid, 'subjects', { ...subject, archived: true });
+    await savePlannerRecord(account.uid, 'blocks', { ...block, status: 'Cancelled' });
+    await expect(
+      savePlannerRecord(account.uid, 'subjects', { ...subject, name: 'Stale' }),
+    ).rejects.toThrow('another session');
+    await signOut(live.auth);
+    await signInWithEmailAndPassword(live.auth, account.email!, password);
+    const loaded = await observePlanner(account.uid);
+    expect(loaded.subjects[0]).toMatchObject({ archived: true, name: subject.name });
+    expect(loaded.classes).toHaveLength(1);
+    expect(loaded.blocks[0]).toMatchObject({ status: 'Cancelled', startAt: block.startAt });
+    expect(loaded.assessments[0]).toMatchObject({ status: 'Completed', remainingMinutes: 0 });
+    expect(
+      (await getDocFromServer(completedRef)).data()!.completedAt.isEqual(firstCompletion),
+    ).toBe(true);
+  });
+  it('makes identical creation retries idempotent and enforces concurrent subject-code uniqueness/rename', async () => {
+    const account = await createAccount();
+    await ensureProfile(account.uid, 'Owner');
+    const sample = exampleView().subjects[0]!;
+    const saved = await savePlannerRecord(account.uid, 'subjects', sample);
+    const retry = await savePlannerRecord(account.uid, 'subjects', sample);
+    expect(retry.revision!.isEqual(saved.revision!)).toBe(true);
+    await expect(
+      savePlannerRecord(account.uid, 'subjects', { ...sample, id: 'duplicate' }),
+    ).rejects.toThrow('code already');
+    const outcomes = await Promise.allSettled(
+      ['concurrent-a', 'concurrent-b'].map((id) =>
+        savePlannerRecord(account.uid, 'subjects', { ...sample, id, code: 'RACE' }),
+      ),
+    );
+    expect(outcomes.filter((outcome) => outcome.status === 'fulfilled')).toHaveLength(1);
+    const renamed = await savePlannerRecord(account.uid, 'subjects', { ...saved, code: 'SE3' });
+    expect(renamed.id).toBe(saved.id);
+    await savePlannerRecord(account.uid, 'subjects', { ...sample, id: 'reused-code' });
+  });
+  it('rejects offline writes without queued surprises and rejects wrong owners', async () => {
+    const account = await createAccount();
+    await ensureProfile(account.uid, 'Owner');
+    const saved = await savePlannerRecord(account.uid, 'subjects', exampleView().subjects[0]!);
+    await disableNetwork(live.database);
+    await expect(
+      savePlannerRecord(account.uid, 'subjects', { ...saved, name: 'Offline' }),
+    ).rejects.toThrow();
+    await enableNetwork(live.database);
+    expect((await observePlanner(account.uid)).subjects[0]!.name).toBe(saved.name);
+    await signOut(live.auth);
+    const other = await createAccount();
+    await ensureProfile(other.uid, 'Other');
+    await expect(savePlannerRecord(account.uid, 'subjects', saved)).rejects.toThrow('owner');
+    await expect(
+      getDocFromServer(doc(live.database, 'users', account.uid, 'subjects', saved.id)),
+    ).rejects.toMatchObject({ code: 'permission-denied' });
+    expect((await observePlanner(other.uid)).subjects).toHaveLength(0);
   });
 });
