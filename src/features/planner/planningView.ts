@@ -5,9 +5,10 @@ import type {
   Subject,
   StudyBudgetMinutes,
 } from '@/shared/types/planner';
+import type { Timestamp } from 'firebase/firestore';
 
 // UI adapters keep date strings separate from persisted Firebase Timestamp contracts.
-type LocalRecord<T> = Omit<T, 'createdAt' | 'updatedAt'> & { id: string };
+type LocalRecord<T> = Omit<T, 'createdAt' | 'updatedAt'> & { id: string; revision?: Timestamp };
 export type ViewSubject = LocalRecord<Subject>;
 export type ViewClass = LocalRecord<ClassSlot>;
 export type ViewAssessment = Omit<LocalRecord<Assessment>, 'dueAt' | 'completedAt'> & {
@@ -70,6 +71,18 @@ export function duration(start: string, end: string) {
 export function overlaps(start: string, end: string, otherStart: string, otherEnd: string) {
   return start < otherEnd && end > otherStart;
 }
+export function blockDetail(data: PlanningView, block: ViewBlock) {
+  const assessment = data.assessments.find((a) => a.id === block.assessmentId);
+  const subject = data.subjects.find((s) => s.id === assessment?.subjectId);
+  return [
+    block.status,
+    assessment?.status === 'Completed' ? 'Assessment completed' : '',
+    assessment?.archived ? 'Assessment archived' : '',
+    subject?.archived ? 'Subject archived' : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
 export function agendaForDay(data: PlanningView, day: string): AgendaItem[] {
   const activeSubject = (id: string) =>
     data.subjects.some((subject) => subject.id === id && !subject.archived);
@@ -101,7 +114,7 @@ export function agendaForDay(data: PlanningView, day: string): AgendaItem[] {
         start: block.startAt,
         end: block.endAt,
         subjectId: data.assessments.find((a) => a.id === block.assessmentId)?.subjectId ?? '',
-        detail: block.status,
+        detail: blockDetail(data, block),
       })),
     ...data.assessments
       .filter(
@@ -120,7 +133,7 @@ export function agendaForDay(data: PlanningView, day: string): AgendaItem[] {
 export function blockConflicts(data: PlanningView, block: ViewBlock) {
   return agendaForDay(data, block.startAt.slice(0, 10)).filter(
     (item) =>
-      item.id !== block.id &&
+      !(item.kind === 'Study' && item.id === block.id) &&
       item.end &&
       overlaps(block.startAt, block.endAt, item.start, item.end),
   );

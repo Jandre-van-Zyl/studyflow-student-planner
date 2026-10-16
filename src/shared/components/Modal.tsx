@@ -7,11 +7,15 @@ export function Modal({
   children,
   onClose,
   drawer = false,
+  busy = false,
+  suspended = false,
 }: {
   title: string;
   children: ReactNode;
   onClose: () => void;
   drawer?: boolean;
+  busy?: boolean;
+  suspended?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const heading = useId();
@@ -19,7 +23,7 @@ export function Modal({
     const node = ref.current;
     const previous = document.activeElement;
     const previousOverflow = document.body.style.overflow;
-    if (!node) return;
+    if (!node || suspended) return;
     if (node.showModal) node.showModal();
     else node.setAttribute('open', '');
     document.body.style.overflow = 'hidden';
@@ -32,7 +36,7 @@ export function Modal({
       document.body.style.overflow = previousOverflow;
       if (previous instanceof HTMLElement && previous.isConnected) previous.focus();
     };
-  }, []);
+  }, [suspended]);
   return (
     <dialog
       ref={ref}
@@ -44,7 +48,7 @@ export function Modal({
       }
       onCancel={(event) => {
         event.preventDefault();
-        onClose();
+        if (!busy) onClose();
       }}
       onKeyDown={(event) => {
         if (event.key !== 'Tab') return;
@@ -68,6 +72,7 @@ export function Modal({
         <h2 id={heading}>{title}</h2>
         <button
           type="button"
+          disabled={busy}
           onClick={onClose}
           className="btn btn-quiet -mt-2 -mr-3"
           aria-label={`Close ${title.toLowerCase()}`}

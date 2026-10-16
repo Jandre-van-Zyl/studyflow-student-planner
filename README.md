@@ -2,7 +2,7 @@
 
 Software Engineering 2 capstone, Group 1, CTU Training Solutions.
 
-**UI and account modules, 16 October 2026.** The six routes now use the planned paper/navy/teal design, responsive navigation, accessible forms and CSS motion. Accounts and profile/budget saves use Firebase. Subjects, assessments, study blocks and dashboard calculations are an **interactive session preview**: initially empty, with an explicit Load example week action; planner records reset on refresh/sign-out and have no Firebase persistence yet. Read the [UI handoff](docs/development/UI_HANDOFF.md), [UI verification](docs/testing/UI_Verification_2026-10-16.md) and [account handoff](docs/development/ACCOUNTS_HANDOFF.md). These changes remain local on jandre; they are not merged into Main, deployed or a completed capstone.
+**Persistent planner, 16 October 2026.** Signed-in accounts now save subjects, recurring classes, assessments and study blocks to private Firebase collections. The dashboard uses those live records and saved profile budgets. Disabled mode retains the explicitly labelled session preview and synthetic example week. Read the [planner handoff](docs/development/PLANNER_HANDOFF.md), [data contract](docs/design/Planner_Data_Contract.md) and [verification/security record](docs/testing/Planner_Persistence_Verification_2026-10-16.md). The paper/navy/teal interface and CSS motion remain. Work is local on jandre; no Main merge, cloud deployment or completed-capstone claim.
 
 ## Start here
 
@@ -116,7 +116,7 @@ The production dependency audit is clear at this baseline; the optional Firebase
 
 Read [FIREBASE.md](docs/development/FIREBASE.md). Default `disabled` mode needs no credentials. `emulator` forces local demo-studyflow and ignores cloud values. `cloud` requires explicit complete public web configuration. No cloud project, billing account or deployment was created.
 
-Firestore rules permit only valid own-profile create/get/update at `users/{uid}`. Profile listing/deletion and unfinished feature collections remain denied. Each feature owner adds schema/ownership rules and tests before persistent CRUD. `.env.local` stays outside Git; never put passwords, service-account JSON or private keys in the frontend.
+Firestore rules permit valid own-profile access and strictly validated own planner collections. Cross-user/unauthenticated access, unknown collections and hard deletes remain denied. Subject-code claims enforce uniqueness atomically. See the [contract](docs/design/Planner_Data_Contract.md). `.env.local` stays outside Git; never put passwords, service-account JSON or private keys in the frontend.
 
 ## Account/profile engineering evidence
 

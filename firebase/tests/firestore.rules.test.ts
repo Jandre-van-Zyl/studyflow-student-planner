@@ -99,6 +99,83 @@ async function linkedSeed() {
   await setDoc(doc(owner(), 'users/student-a/assessments/assessment-a'), assessmentData());
 }
 describe('planner owner, schema and reference contracts', () => {
+  it.each([
+    { name: '' },
+    { name: ' leading' },
+    { name: 'two\nlines' },
+    { code: 'se2' },
+    { code: 'A/B' },
+    { colour: 'red' },
+    { archived: 'false' },
+    { admin: true },
+  ])('denies invalid subject %j even with a matching claim', async (change) => {
+    await seed();
+    const db = owner();
+    const data = { ...subjectData(), ...change };
+    const batch = writeBatch(db);
+    batch.set(doc(db, 'users/student-a/subjects/invalid'), data);
+    // Use a safe claim path even for deliberately invalid codes.
+    batch.set(doc(db, 'users/student-a/subjectCodes/SE2'), { subjectId: 'invalid' });
+    await assertFails(batch.commit());
+  });
+  it.each([15, 180])(
+    'accepts the %i-minute block boundary and rejects forged metadata',
+    async (minutes) => {
+      await linkedSeed();
+      const db = owner();
+      const start = '2020-01-01T08:00:00Z';
+      const end = new Date(Date.parse(start) + minutes * 60000).toISOString();
+      const ref = doc(db, 'users/student-a/studyBlocks/boundary');
+      await assertSucceeds(setDoc(ref, { ...blockData(start, end), status: 'Done' }));
+      await assertFails(updateDoc(ref, { updatedAt: Timestamp.fromMillis(1) }));
+      await assertFails(
+        updateDoc(ref, { createdAt: serverTimestamp(), updatedAt: serverTimestamp() }),
+      );
+      await assertFails(deleteDoc(ref));
+    },
+  );
+  it('accepts leap-day calendars and enforces completion timestamps across edit/reopen', async () => {
+    await linkedSeed();
+    const db = owner();
+    await assertSucceeds(
+      setDoc(doc(db, 'users/student-a/classSlots/leap'), {
+        ...classData(),
+        activeFrom: '2028-02-29',
+        activeTo: '2028-02-29',
+      }),
+    );
+    const ref = doc(db, 'users/student-a/assessments/assessment-a');
+    await assertFails(
+      updateDoc(ref, {
+        status: 'Completed',
+        remainingMinutes: 0,
+        completedAt: Timestamp.fromMillis(1),
+        updatedAt: serverTimestamp(),
+      }),
+    );
+    await assertSucceeds(
+      updateDoc(ref, {
+        status: 'Completed',
+        remainingMinutes: 0,
+        completedAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }),
+    );
+    await assertFails(
+      updateDoc(ref, { completedAt: serverTimestamp(), updatedAt: serverTimestamp() }),
+    );
+    await assertFails(
+      updateDoc(ref, { status: 'In Progress', completedAt: null, updatedAt: serverTimestamp() }),
+    );
+    await assertSucceeds(
+      updateDoc(ref, {
+        status: 'In Progress',
+        remainingMinutes: 30,
+        completedAt: null,
+        updatedAt: serverTimestamp(),
+      }),
+    );
+  });
   it('permits the complete linked owner lifecycle and private collection reads', async () => {
     await linkedSeed();
     const db = owner();

@@ -1,5 +1,7 @@
 # UI and motion handoff
 
+**Later update, 16 October:** the visual/motion guidance below remains current, but its preview-only data section is the earlier UI checkpoint. Signed-in planner persistence is now implemented; use the [current planner handoff](PLANNER_HANDOFF.md) and [contract](../design/Planner_Data_Contract.md) for storage, loading/recovery and rules. Disabled mode alone retains the session preview. The original verification remains dated evidence of the UI-only baseline.
+
 Implemented locally on jandre, 16 October 2026, following Jandre's direct instruction to implement the earlier guide. This supersedes the guide-only boundary. No packages, Firebase schemas/rules or cloud settings changed.
 
 ## What works

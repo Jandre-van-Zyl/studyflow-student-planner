@@ -213,12 +213,15 @@ describe('real planner persistence contract', () => {
       status: 'Completed',
       remainingMinutes: 0,
     });
+    const completedRef = doc(live.database, 'users', account.uid, 'assessments', assessment.id);
+    const firstCompletion = (await getDocFromServer(completedRef)).data()!.completedAt;
     await savePlannerRecord(account.uid, 'assessments', {
       ...complete,
       description: 'Completed notes',
     });
-    const completedRef = doc(live.database, 'users', account.uid, 'assessments', assessment.id);
-    const firstCompletion = (await getDocFromServer(completedRef)).data()!.completedAt;
+    expect(
+      (await getDocFromServer(completedRef)).data()!.completedAt.isEqual(firstCompletion),
+    ).toBe(true);
     await savePlannerRecord(account.uid, 'subjects', { ...subject, archived: true });
     await savePlannerRecord(account.uid, 'blocks', { ...block, status: 'Cancelled' });
     await expect(
@@ -234,6 +237,15 @@ describe('real planner persistence contract', () => {
     expect(
       (await getDocFromServer(completedRef)).data()!.completedAt.isEqual(firstCompletion),
     ).toBe(true);
+    await savePlannerRecord(account.uid, 'assessments', {
+      ...loaded.assessments[0]!,
+      status: 'In Progress',
+      remainingMinutes: 30,
+    });
+    const reopened = (await getDocFromServer(completedRef)).data()!;
+    expect(reopened.completedAt).toBeNull();
+    expect(reopened.remainingMinutes).toBe(30);
+    expect((await observePlanner(account.uid)).blocks).toHaveLength(1);
   });
   it('makes identical creation retries idempotent and enforces concurrent subject-code uniqueness/rename', async () => {
     const account = await createAccount();

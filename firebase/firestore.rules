@@ -33,7 +33,109 @@ service cloud.firestore {
       // Listing other profiles and deleting an account/profile are not part of this feature.
       allow list, delete: if false;
     }
-    // Feature collections stay closed until their owners add matching schemas/tests.
+    function plannerOwner(uid) {
+      return owns(uid) && exists(/databases/$(database)/documents/users/$(uid));
+    }
+    function recordId(id) { return id is string && id.matches('^[A-Za-z0-9_-]{1,128}$'); }
+    function line(value, minimum, maximum) {
+      return value is string && value.size() >= minimum && value.size() <= maximum
+        && (value == '' || value.matches('^[^\\s\\p{Z}\\x{FEFF}]([^\\r\\n\\x{2028}\\x{2029}]*[^\\s\\p{Z}\\x{FEFF}])?$'));
+    }
+    function calendarDay(value) {
+      return value is string && (value.matches('^20[0-9][0-9]-((01|03|05|07|08|10|12)-(0[1-9]|[12][0-9]|3[01])|(04|06|09|11)-(0[1-9]|[12][0-9]|30)|02-(0[1-9]|1[0-9]|2[0-8]))$')
+        || value.matches('^20(00|04|08|12|16|20|24|28|32|36|40|44|48|52|56|60|64|68|72|76|80|84|88|92|96)-02-29$'));
+    }
+    function minute(value) {
+      return value is timestamp && value.seconds() == 0 && value.nanos() == 0
+        && (value + duration.value(2, 'h')).year() >= 2000 && (value + duration.value(2, 'h')).year() <= 2099;
+    }
+    function newMetadata(data) {
+      return data.createdAt == request.time && data.updatedAt == request.time;
+    }
+    function savedMetadata(data) {
+      return data.createdAt == resource.data.createdAt && data.updatedAt == request.time && data.updatedAt >= data.createdAt;
+    }
+    function subjectSchema(data) {
+      return data.keys().hasAll(['name','code','colour','archived','createdAt','updatedAt'])
+        && data.keys().hasOnly(['name','code','colour','archived','createdAt','updatedAt'])
+        && line(data.name,1,80) && data.code is string && data.code.matches('^[A-Z0-9][A-Z0-9_-]{0,19}$')
+        && data.colour in ['sky','teal','amber','rose','violet','indigo'] && data.archived is bool;
+    }
+    function claimed(uid,id,code) {
+      return getAfter(/databases/$(database)/documents/users/$(uid)/subjectCodes/$(code)).data.subjectId == id;
+    }
+    function subjectReference(uid,id,retain) {
+      return recordId(id) && exists(/databases/$(database)/documents/users/$(uid)/subjects/$(id))
+        && (retain || get(/databases/$(database)/documents/users/$(uid)/subjects/$(id)).data.archived == false);
+    }
+    function classSchema(data) {
+      return data.keys().hasAll(['subjectId','weekday','startTime','endTime','activeFrom','activeTo','location','archived','createdAt','updatedAt'])
+        && data.keys().hasOnly(['subjectId','weekday','startTime','endTime','activeFrom','activeTo','location','archived','createdAt','updatedAt'])
+        && data.weekday is int && data.weekday >= 1 && data.weekday <= 7
+        && data.startTime is string && data.endTime is string && data.startTime.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$') && data.endTime.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$')
+        && data.endTime > data.startTime && calendarDay(data.activeFrom) && calendarDay(data.activeTo) && data.activeTo >= data.activeFrom
+        && line(data.location,0,120) && data.archived is bool;
+    }
+    function assessmentSchema(data) {
+      return data.keys().hasAll(['subjectId','title','type','description','dueAt','priority','status','remainingMinutes','archived','completedAt','createdAt','updatedAt'])
+        && data.keys().hasOnly(['subjectId','title','type','description','dueAt','priority','status','remainingMinutes','archived','completedAt','createdAt','updatedAt'])
+        && line(data.title,1,120) && data.type in ['Assignment','Test','Exam','Project'] && data.description is string && data.description.size() <= 2000
+        && data.description == data.description.trim()
+        && minute(data.dueAt) && data.priority in ['High','Medium','Low'] && data.status in ['To Do','In Progress','Completed']
+        && data.remainingMinutes is int && data.archived is bool
+        && (data.status == 'Completed' ? data.remainingMinutes == 0 && data.completedAt is timestamp && data.completedAt <= request.time
+          : data.remainingMinutes >= 1 && data.remainingMinutes <= 14400 && data.completedAt == null);
+    }
+    function completionTime(data, creating) {
+      return data.status != 'Completed' || (creating ? data.completedAt == request.time
+        : (resource.data.status == 'Completed' ? data.completedAt == resource.data.completedAt : data.completedAt == request.time));
+    }
+    function blockSchema(data) {
+      return data.keys().hasAll(['assessmentId','title','startAt','endAt','status','createdAt','updatedAt'])
+        && data.keys().hasOnly(['assessmentId','title','startAt','endAt','status','createdAt','updatedAt'])
+        && line(data.title,1,120) && minute(data.startAt) && minute(data.endAt)
+        && data.endAt - data.startAt >= duration.value(15,'m') && data.endAt - data.startAt <= duration.value(180,'m')
+        && (data.startAt + duration.value(2,'h')).date() == (data.endAt + duration.value(2,'h')).date()
+        && data.status in ['Planned','Done','Cancelled'] && (data.status != 'Done' || data.startAt <= request.time);
+    }
+    function assessmentReference(uid,id,retain) {
+      let linked = get(/databases/$(database)/documents/users/$(uid)/assessments/$(id)).data;
+      return recordId(id) && exists(/databases/$(database)/documents/users/$(uid)/assessments/$(id))
+        && (retain || linked.archived == false && linked.status != 'Completed' && subjectReference(uid,linked.subjectId,false));
+    }
+    match /users/{uid}/subjects/{id} {
+      allow read: if plannerOwner(uid);
+      allow create: if plannerOwner(uid) && recordId(id) && subjectSchema(request.resource.data) && newMetadata(request.resource.data) && claimed(uid,id,request.resource.data.code);
+      allow update: if plannerOwner(uid) && subjectSchema(request.resource.data) && savedMetadata(request.resource.data) && claimed(uid,id,request.resource.data.code)
+        && (request.resource.data.code == resource.data.code || !existsAfter(/databases/$(database)/documents/users/$(uid)/subjectCodes/$(resource.data.code)));
+      allow delete: if false;
+    }
+    match /users/{uid}/subjectCodes/{code} {
+      allow get: if plannerOwner(uid);
+      allow create: if plannerOwner(uid) && code.matches('^[A-Z0-9][A-Z0-9_-]{0,19}$')
+        && request.resource.data.keys().hasAll(['subjectId']) && request.resource.data.keys().hasOnly(['subjectId']) && recordId(request.resource.data.subjectId)
+        && getAfter(/databases/$(database)/documents/users/$(uid)/subjects/$(request.resource.data.subjectId)).data.code == code;
+      allow delete: if plannerOwner(uid) && getAfter(/databases/$(database)/documents/users/$(uid)/subjects/$(resource.data.subjectId)).data.code != code;
+      allow list, update: if false;
+    }
+    match /users/{uid}/classSlots/{id} {
+      allow read: if plannerOwner(uid);
+      allow create: if plannerOwner(uid) && recordId(id) && classSchema(request.resource.data) && newMetadata(request.resource.data) && subjectReference(uid,request.resource.data.subjectId,false);
+      allow update: if plannerOwner(uid) && classSchema(request.resource.data) && savedMetadata(request.resource.data) && subjectReference(uid,request.resource.data.subjectId,request.resource.data.subjectId == resource.data.subjectId);
+      allow delete: if false;
+    }
+    match /users/{uid}/assessments/{id} {
+      allow read: if plannerOwner(uid);
+      allow create: if plannerOwner(uid) && recordId(id) && assessmentSchema(request.resource.data) && completionTime(request.resource.data,true) && newMetadata(request.resource.data) && subjectReference(uid,request.resource.data.subjectId,false);
+      allow update: if plannerOwner(uid) && assessmentSchema(request.resource.data) && completionTime(request.resource.data,false) && savedMetadata(request.resource.data) && subjectReference(uid,request.resource.data.subjectId,request.resource.data.subjectId == resource.data.subjectId);
+      allow delete: if false;
+    }
+    match /users/{uid}/studyBlocks/{id} {
+      allow read: if plannerOwner(uid);
+      allow create: if plannerOwner(uid) && recordId(id) && blockSchema(request.resource.data) && newMetadata(request.resource.data) && assessmentReference(uid,request.resource.data.assessmentId,false);
+      allow update: if plannerOwner(uid) && blockSchema(request.resource.data) && savedMetadata(request.resource.data) && assessmentReference(uid,request.resource.data.assessmentId,request.resource.data.assessmentId == resource.data.assessmentId);
+      allow delete: if false;
+    }
     match /{document=**} {
       allow read, write: if false;
     }

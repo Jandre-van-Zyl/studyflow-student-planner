@@ -79,14 +79,14 @@ describe('persistent workspace lifecycle', () => {
     expect(screen.getByRole('heading', { name: 'Account unavailable' })).toBeInTheDocument();
     expect(observers[0]!.stop).toHaveBeenCalled();
   });
-  it('distinguishes failed loading from empty, clears private data, and retries without accepting stale callbacks', () => {
+  it('distinguishes failed loading from empty, hides stale data, and retries without accepting late callbacks', () => {
     render(tree(context('a')));
     act(() => observers[0]!.next(exampleView()));
     act(() => observers[0]!.fail(new Error('connection lost')));
-    expect(screen.queryByText('Requirements draft')).not.toBeInTheDocument();
+    expect(screen.getByText('Requirements draft')).not.toBeVisible();
     expect(screen.getByRole('alert')).toHaveTextContent('could not be loaded');
     act(() => observers[0]!.next(exampleView()));
-    expect(screen.queryByText('Requirements draft')).not.toBeInTheDocument();
+    expect(screen.getByText('Requirements draft')).not.toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: 'Retry planner' }));
     act(() => observers[1]!.next(EMPTY_VIEW));
     expect(screen.getByRole('heading', { name: 'This week' })).toBeInTheDocument();

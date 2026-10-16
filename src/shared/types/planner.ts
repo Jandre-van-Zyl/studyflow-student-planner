@@ -61,3 +61,16 @@ export interface StudyBlock extends Timestamps {
 }
 
 export type WithId<T> = T & { id: string };
+
+// One build shares this v1 boundary; runtime adapters and rules enforce it on I/O.
+export interface PlannerDocuments {
+  subjects: Subject;
+  classes: ClassSlot;
+  assessments: Assessment;
+  blocks: StudyBlock;
+}
+export type PlannerKind = keyof PlannerDocuments;
+export type PlannerInput<K extends PlannerKind> = Omit<
+  PlannerDocuments[K],
+  'createdAt' | 'updatedAt' | 'completedAt'
+>;

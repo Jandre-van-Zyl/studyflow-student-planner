@@ -5,6 +5,7 @@ import {
   agendaForDay,
   allocation,
   blockConflicts,
+  blockDetail,
   completion,
   exampleView,
   monday,
@@ -15,6 +16,30 @@ import {
 } from './planningView';
 
 describe('planning display calculations', () => {
+  it('labels completed and archived linked work without removing retained block history', () => {
+    const data = exampleView();
+    const block = data.blocks[0]!;
+    const linked = data.assessments.find((a) => a.id === block.assessmentId)!;
+    linked.status = 'Completed';
+    linked.archived = true;
+    expect(agendaForDay(data, '2026-10-19').find((item) => item.id === block.id)?.detail).toBe(
+      'Planned · Assessment completed · Assessment archived',
+    );
+    expect(blockDetail(data, { ...block, status: 'Cancelled' })).toBe(
+      'Cancelled · Assessment completed · Assessment archived',
+    );
+    expect(allocation(data, '2026-10-19')).toBe(90);
+  });
+  it('does not mistake a class with the same document ID for the edited study block', () => {
+    const data = exampleView();
+    const block = {
+      ...data.blocks[0]!,
+      id: data.classes[0]!.id,
+      startAt: '2026-10-19T10:15:00+02:00',
+      endAt: '2026-10-19T10:45:00+02:00',
+    };
+    expect(blockConflicts(data, block).some((item) => item.kind === 'Class')).toBe(true);
+  });
   it('keeps empty and zero-budget data finite', () => {
     expect(completion(EMPTY_VIEW)).toEqual({ total: 0, done: 0, percent: 0, remaining: 0 });
     expect(allocation(EMPTY_VIEW, '2026-10-19')).toBe(0);

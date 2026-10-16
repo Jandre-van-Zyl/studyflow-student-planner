@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
 import { App } from './App';
@@ -38,7 +38,11 @@ describe('shared starter navigation', () => {
     renderAt('/subjects');
     fireEvent.click(screen.getByRole('button', { name: 'Load example week' }));
     fireEvent.click(screen.getByRole('button', { name: 'Archive SE2' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Archive PROG' })).toBeEnabled());
     fireEvent.click(screen.getByRole('button', { name: 'Archive PROG' }));
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Archive PROG' })).not.toBeInTheDocument(),
+    );
     fireEvent.click(screen.getByRole('link', { name: 'Dashboard' }));
     expect(await screen.findByRole('link', { name: 'Restore a subject' })).toHaveAttribute(
       'href',
@@ -81,7 +85,7 @@ describe('shared starter navigation', () => {
     expect(screen.getAllByText('Requirements draft').length).toBeGreaterThan(0);
   });
 
-  it('creates a subject through a labelled form, then permits an assessment', () => {
+  it('creates a subject through a labelled form, then permits an assessment', async () => {
     renderAt('/subjects');
     fireEvent.click(screen.getByRole('button', { name: 'Add subject' }));
     fireEvent.change(screen.getByLabelText('Subject name'), {
@@ -89,7 +93,8 @@ describe('shared starter navigation', () => {
     });
     fireEvent.change(screen.getByLabelText('Subject code'), { target: { value: 'SE2' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save subject' }));
-    expect(screen.getByText('Software Engineering 2')).toBeInTheDocument();
+    expect(await screen.findByText('Software Engineering 2')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     fireEvent.click(screen.getByRole('link', { name: 'Assessments' }));
     expect(screen.getByRole('button', { name: 'Add assessment' })).toBeEnabled();
   });
@@ -100,7 +105,7 @@ describe('shared starter navigation', () => {
     fireEvent.click(screen.getByRole('link', { name: 'Dashboard' }));
     expect(screen.getByText('Requirements draft')).toBeInTheDocument();
   });
-  it('requires explicit confirmation for overlapping study blocks and retains draft inputs', () => {
+  it('requires explicit confirmation for overlapping study blocks and retains draft inputs', async () => {
     renderAt('/planner');
     fireEvent.click(screen.getByRole('button', { name: 'Load example week' }));
     fireEvent.click(screen.getByRole('button', { name: 'Add study block' }));
@@ -114,17 +119,19 @@ describe('shared starter navigation', () => {
     expect(screen.getByLabelText('Start time (SAST)')).toHaveFocus();
     fireEvent.click(screen.getByRole('button', { name: 'Save study block' }));
     fireEvent.click(screen.getByRole('button', { name: 'Save with overlap' }));
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(screen.getAllByText('Overlap draft').length).toBeGreaterThan(0);
   });
-  it('archives and restores assessments without deleting their history', () => {
+  it('archives and restores assessments without deleting their history', async () => {
     renderAt('/assessments');
     fireEvent.click(screen.getByRole('button', { name: 'Load example week' }));
     fireEvent.click(screen.getAllByRole('button', { name: 'Archive Requirements draft' })[0]!);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'archived' })).toBeEnabled());
     expect(screen.queryByText('Requirements draft')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'archived' }));
     expect(screen.getAllByText('Requirements draft').length).toBeGreaterThan(0);
     fireEvent.click(screen.getAllByRole('button', { name: 'Restore Requirements draft' })[0]!);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'active' })).toBeEnabled());
     fireEvent.click(screen.getByRole('button', { name: 'active' }));
     expect(screen.getAllByText('Requirements draft').length).toBeGreaterThan(0);
   });

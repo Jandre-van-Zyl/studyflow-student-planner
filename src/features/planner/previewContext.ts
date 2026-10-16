@@ -1,10 +1,14 @@
 import { createContext, useContext, type Dispatch, type SetStateAction } from 'react';
 import type { StudyBudgetMinutes } from '@/shared/types/planner';
+import type { PlannerKind } from '@/shared/types/planner';
+import type { PlannerViewRecord } from './plannerContract';
 import type { PlanningView } from './planningView';
 
 export interface PreviewContextValue {
   data: PlanningView;
-  setData: Dispatch<SetStateAction<PlanningView>>;
+  saveRecord: <K extends PlannerKind>(kind: K, item: PlannerViewRecord<K>) => Promise<void>;
+  preview: boolean;
+  available: boolean;
   day: string;
   setDay: Dispatch<SetStateAction<string>>;
   budgets: StudyBudgetMinutes;

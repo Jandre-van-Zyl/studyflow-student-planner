@@ -1,7 +1,7 @@
 # Subjects / classes
 
-Proposed owner Riaan; FR-03/04. SubjectsPage now has subject/class forms, divided lists and archive/restore in the labelled session preview. Read [UI handoff](../../../docs/development/UI_HANDOFF.md). Firebase CRUD remains outstanding.
+Proposed owner Riaan; FR-03/04. Subjects/classes now save through the shared UID-scoped planner service, with strict validation, atomic unique code claims, recurring active dates and archive/restore. Disabled mode retains the labelled session preview. Read the [planner handoff](../../../docs/development/PLANNER_HANDOFF.md) and [contract](../../../docs/design/Planner_Data_Contract.md).
 
-Use shared Subject/ClassSlot. Reuse the UI and tested occurrence adapter in planner/planningView.ts; add service, listener/loading/error states, server validation and rules tests. Archive referenced subjects; scope all paths to the authenticated UID. Class slots have inclusive active dates and same-day HH:mm SAST times. Coordinate stored validation/rules with foundation.
+Reuse shared Subject/ClassSlot, plannerContract, plannerService and planningView. Archive referenced subjects; never cascade-delete history. New references require active own subjects; existing records may retain an archived parent. Dates are inclusive and times HH:mm SAST. Keep stable create IDs and captured revisions; retain failed drafts. Coordinate types/validation/rules/tests together.
 
-First acceptance: valid subject entry, useful empty/error states and tests, then own-user persistence after integration. Keep fixtures labelled prototype.
+Local verification includes save/reload, uniqueness/concurrency and owner/schema tests. Cloud integration, team review and the full assessment evidence remain separate. This implementation is not another member's contribution record.

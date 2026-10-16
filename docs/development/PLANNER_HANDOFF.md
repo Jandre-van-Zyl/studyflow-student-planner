@@ -1,0 +1,34 @@
+# Persistent planner handoff
+
+Implemented locally on jandre, 16 October 2026, after the requested ECC click-path-audit → contract-first → security-review workflow. This supersedes the earlier UI handoff's preview-only data boundary. No packages, cloud resources or profile settings were added. Technical ownership remains proposed; this work is not teammates' contribution evidence.
+
+## Run
+
+Use the existing Node 24/npm/Java 21 setup. Stop any existing dev server before switching modes. From the repository root, in separate terminals:
+
+```powershell
+npm run emulators
+```
+
+```powershell
+npm run dev:emulator
+```
+
+Register a disposable test account at http://127.0.0.1:5173/account. Add a subject, class, assessment and block, then refresh: records reload from Firestore. A second account starts empty. Synthetic examples and Clear preview appear only in disabled mode (`npm run dev` with the default disabled configuration). No samples are copied to a live account.
+
+The local emulator is disposable: without export/import, stopping it discards its backend data. Browser refresh persistence does not imply backend-restart persistence or a hosted deployment. Cloud configuration/rules deployment still requires separate authorization and verification. See [Firebase setup](FIREBASE.md).
+
+## Boundary and extension points
+
+- [Shared document types](../../src/shared/types/planner.ts) and [contract v1](../design/Planner_Data_Contract.md) define fields, limits, enums and semantics. [plannerContract](../../src/features/planner/plannerContract.ts) derives inputs and SAST views, parses stored documents and maps safe errors. Dates cover 2000–2099; subject codes use uppercase letters/digits/hyphens/underscores.
+- [plannerService](../../src/features/planner/plannerService.ts) supplies `watchPlanner(uid,next,fail)` and `savePlannerRecord(uid,kind,item)`. Kinds are subjects/classes/assessments/blocks; mappings are subjects/classSlots/assessments/studyBlocks. Reuse the existing Firebase singleton. The UI adapter's captured `revision` is not persisted.
+- [PlanningWorkspace](../../src/features/planner/PlanningWorkspace.tsx) owns four server listeners only for ready sessions, initial all-collection loading, retry, generation guards and cleanup. Auth status/UID keys unmount old data immediately. Same-owner listener failures hide/inert the feature tree and suspend dialogs, preserving drafts for explicit retry. Late callbacks/confirmations cannot revive failed or previous-user views.
+- [usePlannerMutation](../../src/features/planner/usePlannerMutation.ts) locks duplicate writes and ignores late page completions. Forms close/report success after acknowledged saves only. Failure retains values and a stable creation ID; conflicts require explicitly closing/reopening the latest record. Never silently adopt a newer revision into an old draft.
+- Rules enforce exact schemas, own references, server metadata, completion transitions, valid dates/times and future-Done denial. Archive/cancel retains history. Subject-code claims are atomic bookkeeping; no claim lists or feature hard deletes are allowed. Do not bypass the service or relax rules to fix a denial.
+- Dashboard calculations remain pure in [planningView](../../src/features/planner/planningView.ts), consuming live collections plus profile budgets. Completion/archiving preserves block allocation/history; cancellation removes allocation. Overlap warnings use the latest observed intervals and renewed confirmation if they change; they are advisory, not a global schedule lock.
+
+## Verification and limits
+
+Stop manual emulators, then run `npm run check`, `npm run test:rules`, `npm run test:integration`. CI already runs these commands. See [executed verification](../testing/Planner_Persistence_Verification_2026-10-16.md) and [click-path audit](../testing/Click_Path_Audit_2026-10-16.md).
+
+No push, PR, Main/team-branch integration, cloud rules deployment, production data migration, portal extension or course submission occurred. Lecturer feedback on Firestore/ERD/normalisation and genuine team contributions remain outstanding. This local verification does not certify every original capstone acceptance case or a security penetration test.

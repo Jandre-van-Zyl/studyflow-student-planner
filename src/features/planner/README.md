@@ -1,7 +1,7 @@
 # Weekly planner / study blocks
 
-Proposed owner Omphemetse; FR-08/09/10. PlannerPage now has week/day views, a block editor, named clash confirmation, budget warnings and retained cancelled history in the labelled session preview. Read [UI handoff](../../../docs/development/UI_HANDOFF.md). Persistent block services remain outstanding.
+Proposed owner Omphemetse; FR-08/09/10. PlannerPage now saves private study blocks through the shared planner service, retaining week/day views, named overlap confirmation, budget warnings and cancelled history. Disabled mode alone uses the labelled session preview. Read the [planner handoff](../../../docs/development/PLANNER_HANDOFF.md) and [contract](../../../docs/design/Planner_Data_Contract.md).
 
-Consume classes/assessments through agreed contracts; do not duplicate source entities or queries per cell. Reuse planningView.ts interval/occurrence helpers and tests; connect existing UI to a UID-scoped service with complete loading/error/uncertain-write states. Blocks last 15-180 minutes within one local day. SAST dates and half-open overlap rules apply. Warnings are advisory against loaded data with explicit overrides, not a global calendar lock. Cancelled blocks do not reserve workload; assessment completion/archive preserves history.
+PlanningWorkspace owns four server listeners and failure/retry/UID guards. plannerContract derives validated inputs/views from shared types; plannerService supplies revision-checked saves and stable-ID retries. Consume shared collections rather than querying each calendar cell. Blocks last 15–180 minutes on one SAST day. Overlaps are half-open; changed observed conflicts require renewed confirmation. This is advisory, not a global lock. Cancelled blocks do not reserve time; completion/archive retains and labels history.
 
-First acceptance: readable combined-view structure and validated form; label synthetic examples until persisted integration exists.
+Local unit/rules/integration/browser checks are recorded separately from cloud deployment, team review and full course acceptance. No samples are copied into signed-in accounts.

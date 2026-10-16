@@ -1,5 +1,7 @@
 # First working session - Saturday 17 October 2026
 
+**Later local checkpoint, 16 October:** Jandre's branch now also contains UI and persistent planner integration. Read [PLANNER_HANDOFF.md](PLANNER_HANDOFF.md) before assigning work; the proposed bootstrap tasks below are historical and need team review against the actual local branch. These changes have not been pushed or merged into Main. Each member still needs genuine implementation/review/testing/documentation contributions.
+
 Proposed starting plan after the shared bootstrap. Jandre's account/profile module is implemented on his working branch; check its PR/merge status before assuming it is on Main. Dewald confirms actual module owners/capacity; Aneesah records decisions. Proposal/supervisor approval and Firestore assessment acceptance still need actual evidence.
 
 ## Begin together

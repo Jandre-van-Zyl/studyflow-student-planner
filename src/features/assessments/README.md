@@ -1,7 +1,7 @@
 # Assessments
 
-Proposed owner Dewald; FR-05/06/07. AssessmentsPage now has responsive table/list, editor, search, filters, completion/reopening and archive/restore in the labelled session preview. Read [UI handoff](../../../docs/development/UI_HANDOFF.md). Firebase CRUD remains outstanding.
+Proposed owner Dewald; FR-05/06/07. Assessments now save through the shared private planner service, retaining responsive table/list, search, filters, completion/reopening and archive/restore. Disabled mode alone uses the labelled session preview. Read the [planner handoff](../../../docs/development/PLANNER_HANDOFF.md) and [contract](../../../docs/design/Planner_Data_Contract.md).
 
-Use shared fields/enums. Reuse the UI; add services, server-side runtime validation and tests. Store deadlines as Timestamp, display SAST; preview adapters currently use SAST strings and do not persist completedAt. Persistent completion must set zero remainingMinutes/completedAt; reopening requires positive effort and clears completedAt. Archive to retain block history. Reserving a block does not reduce effort. Reuse a stable preallocated ID across uncertain save retries and coordinate auth/subject/rules contracts.
+Use shared fields/enums and validated SAST/Timestamp adapters. Completion sets zero remaining and server completedAt; edits preserve that time, reopening needs positive effort and clears it. Archive retains block history. Reserving time does not reduce effort. Stable create IDs, captured revisions and awaited confirmation protect drafts/retries. New references need active own subjects; existing archived references can remain.
 
-First acceptance: valid assessment form/list and tests, then persistent own-user save/reload. Fixtures are not stored academic records.
+Local tests cover effort toggles, actual backend completion/reopen/history and schema/ownership. Hosted integration, genuine user evaluation and course acceptance evidence remain separate.

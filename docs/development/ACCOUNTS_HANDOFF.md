@@ -1,5 +1,7 @@
 # Accounts/profile developer handoff
 
+**Later integration update, 16 October:** accounts/profile behaviour below remains the module baseline. Planner collections are now implemented locally; the older planned/denied feature statements below describe the earlier accounts checkpoint. Use [PLANNER_HANDOFF.md](PLANNER_HANDOFF.md) and the [v1 contract](../design/Planner_Data_Contract.md) for current collection services/rules. No Main merge or deployment is implied.
+
 Implemented on Jandre's working branch, 16 October 2026. This handoff supports the other feature owners; it does not claim their modules or a Main merge are complete.
 
 ## Run and verify

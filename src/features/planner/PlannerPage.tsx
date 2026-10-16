@@ -7,11 +7,13 @@ import { SubjectLabel, WeekControls } from '@/shared/components/PlanningUI';
 import type { StudyBlockStatus } from '@/shared/types/planner';
 import { usePlanningPreview } from './previewContext';
 import { useCurrentTime } from '@/shared/hooks/useCurrentTime';
+import { usePlannerMutation } from './usePlannerMutation';
 import {
   addDays,
   agendaForDay,
   allocation,
   blockConflicts,
+  blockDetail,
   displayDay,
   duration,
   monday,
@@ -23,7 +25,8 @@ import {
 
 export function PlannerPage() {
   const now = useCurrentTime();
-  const { data, setData, day, setDay, budgets } = usePlanningPreview();
+  const { data, day, setDay, budgets } = usePlanningPreview();
+  const { run, busy, error: writeError, preview } = usePlannerMutation();
   const [editing, setEditing] = useState<ViewBlock | 'new' | null>(null);
   const [showCancelled, setShowCancelled] = useState(false);
   const [message, setMessage] = useState('');
@@ -35,19 +38,14 @@ export function PlannerPage() {
       a.status !== 'Completed' &&
       data.subjects.some((s) => s.id === a.subjectId && !s.archived),
   );
-  function save(item: ViewBlock) {
+  async function save(item: ViewBlock) {
+    if (!(await run('blocks', item))) return;
     if (!data.blocks.some((block) => block.id === item.id)) setInserted(item.id);
-    setData((current) => ({
-      ...current,
-      blocks: current.blocks.some((b) => b.id === item.id)
-        ? current.blocks.map((b) => (b.id === item.id ? item : b))
-        : [...current.blocks, item],
-    }));
     setEditing(null);
-    setMessage('Study block updated in preview.');
+    setMessage(preview ? 'Study block updated in preview.' : 'Study block saved to your account.');
   }
   function eventView(item: AgendaItem, scope: string) {
-    const block = data.blocks.find((b) => b.id === item.id);
+    const block = item.kind === 'Study' ? data.blocks.find((b) => b.id === item.id) : undefined;
     const future = !!block && Date.parse(block.startAt) > now;
     return (
       <li
@@ -130,114 +128,130 @@ export function PlannerPage() {
   }
   return (
     <section>
-      <header className="page-header">
-        <div>
-          <h1>Weekly planner</h1>
-          <p className="page-description">Classes, study time and deadlines. One week at a time.</p>
+      <fieldset className="contents" disabled={busy}>
+        <header className="page-header">
+          <div>
+            <h1>Weekly planner</h1>
+            <p className="page-description">
+              Classes, study time and deadlines. One week at a time.
+            </p>
+          </div>
+          <button
+            className="btn btn-primary"
+            disabled={!canAdd}
+            aria-describedby={!canAdd ? 'block-disabled' : undefined}
+            onClick={() => {
+              setMessage('');
+              setEditing('new');
+            }}
+          >
+            Add study block
+          </button>
+        </header>
+        {!canAdd && (
+          <p id="block-disabled" className="notice mb-6">
+            <Link to="/assessments" className="text-link">
+              Add an incomplete assessment
+            </Link>{' '}
+            in an active subject before planning study time.
+          </p>
+        )}
+        {message && (
+          <p role="status" className="notice feedback-enter mb-5">
+            {message}
+          </p>
+        )}
+        {writeError && !editing && (
+          <p role="alert" className="notice notice-error">
+            {writeError}
+          </p>
+        )}
+        {busy && (
+          <p role="status" className="help">
+            Saving… Wait for confirmation before closing.
+          </p>
+        )}
+        <WeekControls />
+        <div className="my-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted">
+          <span>Class · recurring timetable</span>
+          <span>Study · reserved time</span>
+          <span>Deadline · due time</span>
         </div>
-        <button
-          className="btn btn-primary"
-          disabled={!canAdd}
-          aria-describedby={!canAdd ? 'block-disabled' : undefined}
-          onClick={() => {
-            setMessage('');
-            setEditing('new');
-          }}
-        >
-          Add study block
-        </button>
-      </header>
-      {!canAdd && (
-        <p id="block-disabled" className="notice mb-6">
-          <Link to="/assessments" className="text-link">
-            Add an incomplete assessment
-          </Link>{' '}
-          in an active subject before planning study time.
-        </p>
-      )}
-      {message && (
-        <p role="status" className="notice feedback-enter mb-5">
-          {message}
-        </p>
-      )}
-      <WeekControls />
-      <div className="my-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted">
-        <span>Class · recurring timetable</span>
-        <span>Study · reserved time</span>
-        <span>Deadline · due time</span>
-      </div>
-      <div className="hidden grid-cols-7 divide-x divide-line xl:grid">
-        {days.map((value) => (
-          <section key={value} className="min-w-0 px-2 first:pl-0 last:pr-0">
-            <h2 className={`mb-2 text-sm ${value === day ? 'text-accent' : ''}`}>
-              {displayDay(value, { weekday: 'short', day: 'numeric' })}
-            </h2>
-            {dayView(value, 'week')}
-          </section>
-        ))}
-      </div>
-      <div className="xl:hidden">
-        <div className="mb-6 grid grid-cols-4 gap-2 sm:grid-cols-7" aria-label="Choose day">
+        <div className="hidden grid-cols-7 divide-x divide-line xl:grid">
           {days.map((value) => (
-            <button
-              key={value}
-              className={`btn flex-col gap-0 px-1 ${value === day ? 'btn-primary' : 'btn-secondary'}`}
-              aria-pressed={value === day}
-              onClick={() => setDay(value)}
-            >
-              <span className="text-xs">{displayDay(value, { weekday: 'short' })}</span>
-              <span>{displayDay(value, { day: 'numeric' })}</span>
-            </button>
+            <section key={value} className="min-w-0 px-2 first:pl-0 last:pr-0">
+              <h2 className={`mb-2 text-sm ${value === day ? 'text-accent' : ''}`}>
+                {displayDay(value, { weekday: 'short', day: 'numeric' })}
+              </h2>
+              {dayView(value, 'week')}
+            </section>
           ))}
         </div>
-        <section key={day} className="panel-enter">
-          <h2 className="mb-3">
-            {displayDay(day, { weekday: 'long', day: 'numeric', month: 'long' })}
-          </h2>
-          {dayView(day, 'day')}
-        </section>
-      </div>
-      <div className="mt-8 border-t border-line pt-3">
-        <button
-          className="text-link text-sm"
-          aria-expanded={showCancelled}
-          onClick={() => setShowCancelled(!showCancelled)}
-        >
-          Cancelled blocks ({data.blocks.filter((b) => b.status === 'Cancelled').length})
-        </button>
-        {showCancelled && (
-          <ul className="panel-enter divide-y divide-line">
-            {data.blocks
-              .filter((b) => b.status === 'Cancelled')
-              .map((b) => (
-                <li key={b.id} className="flex flex-wrap items-center justify-between gap-3 py-4">
-                  <div>
-                    <p className="font-semibold">{b.title}</p>
-                    <p className="help">
-                      {displayDay(b.startAt.slice(0, 10))} · {b.startAt.slice(11, 16)}–
-                      {b.endAt.slice(11, 16)} · Cancelled
-                    </p>
-                  </div>
-                  <button className="btn btn-quiet" onClick={() => setEditing(b)}>
-                    Edit cancelled block
-                  </button>
+        <div className="xl:hidden">
+          <div className="mb-6 grid grid-cols-4 gap-2 sm:grid-cols-7" aria-label="Choose day">
+            {days.map((value) => (
+              <button
+                key={value}
+                className={`btn flex-col gap-0 px-1 ${value === day ? 'btn-primary' : 'btn-secondary'}`}
+                aria-pressed={value === day}
+                onClick={() => setDay(value)}
+              >
+                <span className="text-xs">{displayDay(value, { weekday: 'short' })}</span>
+                <span>{displayDay(value, { day: 'numeric' })}</span>
+              </button>
+            ))}
+          </div>
+          <section key={day} className="panel-enter">
+            <h2 className="mb-3">
+              {displayDay(day, { weekday: 'long', day: 'numeric', month: 'long' })}
+            </h2>
+            {dayView(day, 'day')}
+          </section>
+        </div>
+        <div className="mt-8 border-t border-line pt-3">
+          <button
+            className="text-link text-sm"
+            aria-expanded={showCancelled}
+            onClick={() => setShowCancelled(!showCancelled)}
+          >
+            Cancelled blocks ({data.blocks.filter((b) => b.status === 'Cancelled').length})
+          </button>
+          {showCancelled && (
+            <ul className="panel-enter divide-y divide-line">
+              {data.blocks
+                .filter((b) => b.status === 'Cancelled')
+                .map((b) => (
+                  <li key={b.id} className="flex flex-wrap items-center justify-between gap-3 py-4">
+                    <div>
+                      <p className="font-semibold">{b.title}</p>
+                      <p className="help">
+                        {displayDay(b.startAt.slice(0, 10))} · {b.startAt.slice(11, 16)}–
+                        {b.endAt.slice(11, 16)} · {blockDetail(data, b)}
+                      </p>
+                    </div>
+                    <button className="btn btn-quiet" onClick={() => setEditing(b)}>
+                      Edit cancelled block
+                    </button>
+                  </li>
+                ))}
+              {!data.blocks.some((b) => b.status === 'Cancelled') && (
+                <li className="py-4 text-sm text-muted">
+                  No cancelled blocks. Cancelling retains a block's history.
                 </li>
-              ))}
-            {!data.blocks.some((b) => b.status === 'Cancelled') && (
-              <li className="py-4 text-sm text-muted">
-                No cancelled blocks. Cancelling retains a block's history.
-              </li>
-            )}
-          </ul>
+              )}
+            </ul>
+          )}
+        </div>
+        {editing && (
+          <BlockEditor
+            item={editing === 'new' ? undefined : editing}
+            close={() => setEditing(null)}
+            save={save}
+            busy={busy}
+            writeError={writeError}
+          />
         )}
-      </div>
-      {editing && (
-        <BlockEditor
-          item={editing === 'new' ? undefined : editing}
-          close={() => setEditing(null)}
-          save={save}
-        />
-      )}
+      </fieldset>
     </section>
   );
 }
@@ -246,14 +260,22 @@ function BlockEditor({
   item,
   close,
   save,
+  busy,
+  writeError,
 }: {
   item?: ViewBlock;
   close: () => void;
   save: (block: ViewBlock) => void;
+  busy: boolean;
+  writeError: string;
 }) {
-  const { data, day, budgets } = usePlanningPreview();
+  const { data, day, budgets, available } = usePlanningPreview();
   const [error, setError] = useState('');
   const [pending, setPending] = useState<ViewBlock | null>(null);
+  const [id] = useState(() => item?.id ?? crypto.randomUUID());
+  const confirmedConflicts = useRef('');
+  const fingerprint = (block: ViewBlock) =>
+    JSON.stringify(blockConflicts(data, block).map((c) => [c.kind, c.id, c.start, c.end]));
   const warning = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (pending) warning.current?.focus();
@@ -270,7 +292,8 @@ function BlockEditor({
     const values = new FormData(event.currentTarget);
     const get = (key: string) => String(values.get(key) ?? '');
     const block: ViewBlock = {
-      id: item?.id ?? crypto.randomUUID(),
+      id,
+      revision: item?.revision,
       assessmentId: get('assessment'),
       title: get('title').trim(),
       startAt: get('date') + 'T' + get('start') + ':00+02:00',
@@ -288,6 +311,7 @@ function BlockEditor({
     }
     setError('');
     if (block.status !== 'Cancelled' && blockConflicts(data, block).length) {
+      confirmedConflicts.current = fingerprint(block);
       setPending(block);
       return;
     }
@@ -304,7 +328,12 @@ function BlockEditor({
       duration(pending.startAt, pending.endAt)
     : 0;
   return (
-    <Modal title={item ? 'Edit study block' : 'Add study block'} onClose={close}>
+    <Modal
+      title={item ? 'Edit study block' : 'Add study block'}
+      onClose={close}
+      busy={busy}
+      suspended={!available}
+    >
       <form
         className="space-y-5"
         onSubmit={submit}
@@ -313,6 +342,11 @@ function BlockEditor({
           setError('');
         }}
       >
+        {writeError && (
+          <p role="alert" className="notice notice-error">
+            {writeError}
+          </p>
+        )}
         {error && (
           <p className="notice notice-error feedback-enter" role="alert">
             {error}
@@ -346,6 +380,8 @@ function BlockEditor({
           name="date"
           label="Study date"
           type="date"
+          min="2000-01-01"
+          max="2099-12-31"
           required
           defaultValue={item?.startAt.slice(0, 10) ?? day}
         />
@@ -392,7 +428,7 @@ function BlockEditor({
             <h3 className="text-warning">This time overlaps</h3>
             <ul className="mt-2 list-disc pl-5">
               {conflicts.map((c) => (
-                <li key={c.id}>
+                <li key={c.kind + ':' + c.id}>
                   {c.title} · {c.start.slice(11, 16)}–{c.end?.slice(11, 16)}
                 </li>
               ))}
@@ -414,7 +450,25 @@ function BlockEditor({
               >
                 Change time
               </button>
-              <button type="button" className="btn btn-primary" onClick={() => save(pending)}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => {
+                  if (pending.status === 'Done' && Date.parse(pending.startAt) > Date.now()) {
+                    setError('A future study block cannot be marked done before its start time.');
+                    return;
+                  }
+                  const latest = fingerprint(pending);
+                  if (latest !== confirmedConflicts.current) {
+                    confirmedConflicts.current = latest;
+                    setError(
+                      'The overlapping times changed. Review the current list, then confirm again.',
+                    );
+                    return;
+                  }
+                  save(pending);
+                }}
+              >
                 Save with overlap
               </button>
             </div>

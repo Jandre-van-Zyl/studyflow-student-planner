@@ -27,11 +27,20 @@ export function DashboardPage() {
     .filter((a) => !a.archived && a.status !== 'Completed')
     .sort((a, b) => a.dueAt.localeCompare(b.dueAt))[0];
   const activeSubjects = data.subjects.some((s) => !s.archived);
-  const action = suggestion
+  const canPlan = data.assessments.some(
+    (a) =>
+      !a.archived &&
+      a.status !== 'Completed' &&
+      data.subjects.some((s) => s.id === a.subjectId && !s.archived),
+  );
+  const action = canPlan
     ? { to: '/planner', label: 'Plan study time' }
     : activeSubjects
       ? { to: '/assessments', label: 'Add an assessment' }
-      : { to: '/subjects', label: 'Add your first subject' };
+      : {
+          to: '/subjects',
+          label: data.subjects.length ? 'Restore a subject' : 'Add your first subject',
+        };
   return (
     <section>
       <header className="page-header">

@@ -15,3 +15,30 @@
 - Feature editor/filter state is page-local; route change unmounts it. No shared setter should reset another page's active editor/filter. Preview save currently means only a synchronous setData; persistent saves must replace that boundary with awaited acknowledgement, draft retention, UID guards and explicit loading/error states.
 
 Dangerous reset boundaries to verify: example/clear must never touch persistent data; UID/logout/profile failure must never expose an old dataset; route navigation must not discard stored planner data; a late save/listener must not restore private data after sign-out; confirmed overlapping block must be revalidated at the write boundary.
+
+## Findings and resolution
+
+The state map above describes the inspected 992ca7b baseline. After mapping it, three read-only page audits covered subjects/classes, assessments and planner/dashboard. A second read-only review inspected their new asynchronous persistence boundary. These reviews did not edit code, run browser actions or represent teammates' contributions.
+
+| Finding / sequence                                                                                   | Resolution and evidence                                                                                                                                                       |
+| ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Archived tab → Add subject → Save hides the new active subject                                       | Switch to Active only after acknowledged new creation; executed UI regression and real browser flow pass.                                                                     |
+| Edit effort → Completed → In Progress silently resets the estimate                                   | Controlled remaining draft survives toggles; app regression and browser 120-minute flow pass.                                                                                 |
+| All subjects archived → dashboard Plan study time → disabled planner action                          | CTA checks actual plannable eligibility and offers Restore a subject; app regression passes. History remains.                                                                 |
+| Linked assessment completes/archives but retained block omits its state                              | Shared block detail labels completion/archive in agenda and cancelled history; calculation tests and browser evidence pass.                                                   |
+| Class and study share a document ID                                                                  | Self-exclusion checks kind plus ID; action lookup only resolves Study rows; warning keys include kind. Regression covers same-ID class conflict.                              |
+| Committed subject creation → listener adds it → confirmation lost → retry sees own code as duplicate | Duplicate check excludes the editor's stable ID; mocked listener-before-rejection regression and real service idempotence pass.                                               |
+| Listener fails → late callback revives old view                                                      | Failure stops listeners and invalidates load generation; late callback regression passes.                                                                                     |
+| Same-owner listener fails while editing → draft unmounted                                            | Keep hidden/inert same-UID view/draft, suspend dialog and resume only after explicit retry/server load. Real UID/status changes still immediately unmount. Regression passes. |
+
+## Persistent save click paths
+
+- All create/edit/archive/restore/cancel actions use the shared awaited mutation boundary. A ref lock prevents duplicate requests; disabled controls and busy dialog Close/Escape wait for completion. Failed writes retain input/error; success closes only after service confirmation. Stable IDs originate at editor opening, not each submit.
+- Opening an editor captures its revision. Listener changes do not silently update that revision into the old draft. Conflicts explain that closing/reopening explicitly loads the latest record. Account/route unmounts ignore late completion.
+- Initial loading and errors are distinct from empty; Retry reinstalls listeners. Same-owner failed loading hides/inerts the retained page while preserving drafts. Auth status/UID change disposes the whole old workspace. Example/Clear preview remain unavailable in signed-in mode.
+- Block overlap submission checks current intervals; input changes reset pending confirmation, and changed observed conflicts require renewed confirmation. Future Done is checked again on confirmation and by service/rules. This is advisory, not a distributed collision lock.
+- New references require active own parents; existing archived/completed references remain selectable for retained history. Completing/archiving an assessment never deletes its blocks. Cancelled blocks retain history but leave allocation.
+
+Source tracing covered Add/Edit/Save/Cancel/Close/Escape, archive/restore, active/completed/archive views, search/filters/clear, day/week controls, named overlap/Change time/confirm, Done/cancel/history and dashboard navigation. No further actionable high-impact defect was identified in the second source review; this is bounded review evidence, not proof that every possible browser/session sequence is defect-free.
+
+See the [executed verification/security report](Planner_Persistence_Verification_2026-10-16.md) for final automated counts, actual browser journeys, compiled smoke test, evidence and remaining limits.
