@@ -12,6 +12,39 @@ function renderAt(path: string) {
 }
 
 describe('shared starter navigation', () => {
+  it('shows a newly saved subject when it was added from Archived', async () => {
+    renderAt('/subjects');
+    fireEvent.click(screen.getByRole('button', { name: 'Archived (0)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add subject' }));
+    fireEvent.change(screen.getByLabelText('Subject name'), {
+      target: { value: 'Visible subject' },
+    });
+    fireEvent.change(screen.getByLabelText('Subject code'), { target: { value: 'VIS' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save subject' }));
+    expect(await screen.findByText('Visible subject')).toBeVisible();
+  });
+  it('retains the remaining-effort draft when completion is toggled twice', () => {
+    renderAt('/assessments');
+    fireEvent.click(screen.getByRole('button', { name: 'Load example week' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Edit Requirements draft' })[0]!);
+    fireEvent.change(screen.getByLabelText('Remaining effort (minutes)'), {
+      target: { value: '120' },
+    });
+    fireEvent.change(screen.getByLabelText('Status'), { target: { value: 'Completed' } });
+    fireEvent.change(screen.getByLabelText('Status'), { target: { value: 'In Progress' } });
+    expect(screen.getByLabelText('Remaining effort (minutes)')).toHaveValue(120);
+  });
+  it('offers a usable restore action when all subjects are archived', async () => {
+    renderAt('/subjects');
+    fireEvent.click(screen.getByRole('button', { name: 'Load example week' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Archive SE2' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Archive PROG' }));
+    fireEvent.click(screen.getByRole('link', { name: 'Dashboard' }));
+    expect(await screen.findByRole('link', { name: 'Restore a subject' })).toHaveAttribute(
+      'href',
+      '/subjects',
+    );
+  });
   it('opens the dashboard without Firebase configuration', () => {
     renderAt('/');
     expect(screen.getByRole('heading', { level: 1, name: 'This week' })).toBeInTheDocument();

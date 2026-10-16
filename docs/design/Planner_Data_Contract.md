@@ -1,0 +1,39 @@
+# Planner data contract v1
+
+16 October 2026. Consumers are Subjects & classes, Assessments, Planner and Dashboard. The shared TypeScript types in `src/shared/types/planner.ts` are authoritative; all consumers share one build. Runtime parsing, service adapters and Firestore rules must enforce the same semantics. No HTTP server, schema generator or new dependency is needed.
+
+Jandre is implementing this local boundary at the user's request. Proposed module responsibilities remain subject to team agreement; this does not manufacture other members' contributions. Dewald coordinates team review. Changes to fields, enums or semantics require a coordinated types/validator/rules/tests update before consumers change. Existing accounts/profile contracts are preserved.
+
+## Operations and responses
+
+- Observe the ready authenticated owner's four collections: `users/{uid}/subjects`, `classSlots`, `assessments`, `studyBlocks`. Never a collection-group query. Missing collections mean empty arrays only after server confirmation. Cached/pending snapshots are not confirmed data. Initial loading and listener errors are distinct from empty. Dispose listeners on UID/status changes; ignore late callbacks. No planner data in browser storage.
+- Save one typed record, with a stable ID allocated when its editor opens. The UI passes the revision captured when opening an existing record. A transaction checks that revision; stale updates fail rather than overwrite. Preserve createdAt, set updatedAt on the server and return a parsed, server-confirmed record. New-ID retry with identical contents is idempotent; a different existing record is a conflict. A lost acknowledgement can be uncertain: keep the draft and retry/reload; do not announce success early.
+- Archive/restore subjects, classes and assessments; cancel study blocks. Hard deletes are denied. History and references remain. Completed assessments have zero remaining effort and server completedAt; retain that timestamp on subsequent edits, clear it on reopening. Reopening requires a positive estimate.
+- Stable error categories: validation, conflict, duplicate-code, reference, session, unavailable. Show safe actionable messages, retain failed drafts, block duplicate submission. Conflict recovery is explicit: close and reopen the current record to load its latest revision. No silent draft replacement.
+
+## Field semantics
+
+All persisted documents use exact keys from the shared types; IDs are snapshot IDs, never editable owner fields. All createdAt/updatedAt values are Firestore Timestamp values, createdAt immutable and updatedAt request.time on writes. No extra privilege/password/owner fields.
+
+| Record     | Constraints                                                                                                                                                                                                                                                                                                                                                                                            |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Subject    | Trimmed single-line name 1–80; uppercase code `[A-Z0-9][A-Z0-9_-]{0,19}`; declared colour enum; boolean archived. Codes are unique per owner including archived subjects. Atomic `subjectCodes/{CODE}` claims `{subjectId}` enforce concurrent uniqueness. Rename moves the claim atomically while keeping subject ID/references. Claims are implementation bookkeeping, owner-get only, never listed. |
+| Class      | Own subject reference; integer weekday 1–7; HH:mm start/end, end strictly later; real YYYY-MM-DD active dates inclusive and ordered; trimmed single-line location 0–120; archived boolean.                                                                                                                                                                                                             |
+| Assessment | Own subject reference; trimmed single-line title 1–120; declared type/priority/status enums; trimmed description 0–2000; minute-aligned dueAt; remainingMinutes integer 1–14400 while incomplete, 0 when Completed; archived boolean; completedAt timestamp iff Completed.                                                                                                                             |
+| Block      | Own assessment reference; trimmed single-line title 1–120; minute-aligned start/end timestamps, 15–180 minutes on one SAST day; declared status enum; Done cannot start in the future (server time).                                                                                                                                                                                                   |
+
+Dates are interpreted in Africa/Johannesburg (UTC+02:00). Adapters explicitly convert Timestamp to SAST wall time, preserving day boundaries. v1 calendar range is years 2000–2099, declared consistently in forms/validation/rules. This avoids unsupported calendar interpretation and covers the project's student-planning horizon.
+
+New/changed references require an existing active own subject; new/changed block references additionally require an incomplete, unarchived assessment. An existing record may retain its unchanged archived/completed parent reference for editing/history/cancellation. No cross-user references or path-valued IDs. Retained blocks label linked assessment completion/archive state. Parent archive is not cascading deletion.
+
+## UI/save lifecycle
+
+Disabled Firebase mode retains the explicitly labelled in-memory preview and synthetic example controls. Signed-in ready mode starts with actual server data and never imports samples. Sample/clear controls cannot write to live collections. Profile-loading/error/signed-out states never query planner collections. Failed live loading locks planner mutations and offers retry; failed writes retain the open draft. Ordinary route navigation retains data; refresh reloads it from Firestore.
+
+Overlap confirmation uses current observed class/block intervals; changing inputs or observed conflicts requires renewed confirmation. It remains advisory, not a distributed schedule lock. Budgets remain profile settings, classes do not consume study allocation, and allocating blocks does not reduce estimated remaining effort.
+
+## Verification obligations
+
+Unit/UI: adapters, invalid calendar/enum/key inputs, audit regressions, retained drafts, async locking, UID/error/listener isolation. Rules: valid lifecycle, unauthenticated/foreign get/list/write, exact schemas, metadata forgery, references, code claims/concurrency, invalid intervals/completion and hard-delete denial. Real emulator integration: complete linked save/reload flow, stale revision, retry, uniqueness, offline and account isolation. Browser: real save/refresh, actionable errors and navigation. These are required checks, not results until executed.
+
+Firebase references: [transactions](https://firebase.google.com/docs/firestore/manage-data/transactions), [atomic rule validation](https://firebase.google.com/docs/firestore/security/rules-conditions), [listener metadata](https://firebase.google.com/docs/firestore/query-data/listen). Cloud provisioning/deployment and academic acceptance remain separate.

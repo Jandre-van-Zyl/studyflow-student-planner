@@ -15,6 +15,7 @@ import {
   setDoc,
   Timestamp,
   updateDoc,
+  writeBatch,
 } from 'firebase/firestore';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
@@ -31,6 +32,222 @@ beforeAll(async () => {
       port: Number(port),
       rules: readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8'),
     },
+  });
+});
+
+function subjectData(code = 'SE2') {
+  return {
+    name: 'Software Engineering',
+    code,
+    colour: 'teal',
+    archived: false,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+}
+async function createSubject(id = 'subject-a', code = 'SE2') {
+  const db = owner();
+  const batch = writeBatch(db);
+  batch.set(doc(db, `users/student-a/subjects/${id}`), subjectData(code));
+  batch.set(doc(db, `users/student-a/subjectCodes/${code}`), { subjectId: id });
+  await batch.commit();
+}
+function assessmentData() {
+  return {
+    subjectId: 'subject-a',
+    title: 'Requirements',
+    type: 'Project',
+    description: '',
+    dueAt: Timestamp.fromDate(new Date('2026-10-20T10:00:00Z')),
+    priority: 'High',
+    status: 'To Do',
+    remainingMinutes: 90,
+    archived: false,
+    completedAt: null,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+}
+function classData() {
+  return {
+    subjectId: 'subject-a',
+    weekday: 1,
+    startTime: '09:00',
+    endTime: '10:00',
+    activeFrom: '2026-10-19',
+    activeTo: '2026-11-30',
+    location: '',
+    archived: false,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+}
+function blockData(start = '2026-10-19T08:00:00Z', end = '2026-10-19T08:45:00Z') {
+  return {
+    assessmentId: 'assessment-a',
+    title: 'Draft requirements',
+    startAt: Timestamp.fromDate(new Date(start)),
+    endAt: Timestamp.fromDate(new Date(end)),
+    status: 'Planned',
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+}
+async function linkedSeed() {
+  await seed();
+  await createSubject();
+  await setDoc(doc(owner(), 'users/student-a/assessments/assessment-a'), assessmentData());
+}
+describe('planner owner, schema and reference contracts', () => {
+  it('permits the complete linked owner lifecycle and private collection reads', async () => {
+    await linkedSeed();
+    const db = owner();
+    await assertSucceeds(setDoc(doc(db, 'users/student-a/classSlots/class-a'), classData()));
+    await assertSucceeds(setDoc(doc(db, 'users/student-a/studyBlocks/block-a'), blockData()));
+    for (const name of ['subjects', 'classSlots', 'assessments', 'studyBlocks'])
+      await assertSucceeds(getDocs(collection(db, `users/student-a/${name}`)));
+    await assertSucceeds(
+      updateDoc(doc(db, 'users/student-a/assessments/assessment-a'), {
+        status: 'Completed',
+        remainingMinutes: 0,
+        completedAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }),
+    );
+    await assertSucceeds(
+      updateDoc(doc(db, 'users/student-a/subjects/subject-a'), {
+        archived: true,
+        updatedAt: serverTimestamp(),
+      }),
+    );
+    await assertSucceeds(
+      updateDoc(doc(db, 'users/student-a/studyBlocks/block-a'), {
+        status: 'Cancelled',
+        updatedAt: serverTimestamp(),
+      }),
+    );
+    expect((await getDoc(doc(db, 'users/student-a/studyBlocks/block-a'))).exists()).toBe(true);
+  });
+  it('requires atomic unique subject claims, supports rename, and prevents claim stealing', async () => {
+    await seed();
+    await assertFails(setDoc(doc(owner(), 'users/student-a/subjects/unclaimed'), subjectData()));
+    await createSubject();
+    await expect(createSubject('duplicate', 'SE2')).rejects.toThrow();
+    const db = owner();
+    const batch = writeBatch(db);
+    batch.update(doc(db, 'users/student-a/subjects/subject-a'), {
+      code: 'SE3',
+      updatedAt: serverTimestamp(),
+    });
+    batch.delete(doc(db, 'users/student-a/subjectCodes/SE2'));
+    batch.set(doc(db, 'users/student-a/subjectCodes/SE3'), { subjectId: 'subject-a' });
+    await assertSucceeds(batch.commit());
+    await assertFails(deleteDoc(doc(db, 'users/student-a/subjectCodes/SE3')));
+    await assertFails(getDocs(collection(db, 'users/student-a/subjectCodes')));
+  });
+  it.each(['subjects', 'classSlots', 'assessments', 'studyBlocks'])(
+    'denies unauthenticated/foreign reads, lists, edits and deletes of %s',
+    async (name) => {
+      await linkedSeed();
+      for (const db of [
+        environment.unauthenticatedContext().firestore(),
+        environment.authenticatedContext('student-b').firestore(),
+      ]) {
+        const ref = doc(db, `users/student-a/${name}/record`);
+        await assertFails(getDoc(ref));
+        await assertFails(getDocs(collection(db, `users/student-a/${name}`)));
+        await assertFails(setDoc(ref, assessmentData()));
+        await assertFails(deleteDoc(ref));
+      }
+    },
+  );
+  it.each([
+    { weekday: 0 },
+    { weekday: 1.5 },
+    { startTime: '25:00' },
+    { endTime: '08:00' },
+    { activeFrom: '2025-02-29' },
+    { activeTo: '2026-02-30' },
+    { activeTo: '2026-10-18' },
+    { subjectId: 'foreign' },
+    { location: 'x'.repeat(121) },
+    { owner: 'student-a' },
+  ])('denies invalid class %j', async (change) => {
+    await linkedSeed();
+    await assertFails(
+      setDoc(doc(owner(), 'users/student-a/classSlots/class-a'), { ...classData(), ...change }),
+    );
+  });
+  it.each([
+    { status: 'Unknown' },
+    { type: 'Other' },
+    { priority: 'Urgent' },
+    { remainingMinutes: 0 },
+    { remainingMinutes: 1.5 },
+    { remainingMinutes: 14401 },
+    { status: 'Completed', remainingMinutes: 0 },
+    { completedAt: serverTimestamp() },
+    { title: '' },
+    { description: 'x'.repeat(2001) },
+    { subjectId: 'missing' },
+    { admin: true },
+    { dueAt: Timestamp.fromMillis(1001) },
+  ])('denies invalid assessment %j', async (change) => {
+    await linkedSeed();
+    await assertFails(
+      setDoc(doc(owner(), 'users/student-a/assessments/invalid'), {
+        ...assessmentData(),
+        ...change,
+      }),
+    );
+  });
+  it.each([
+    {
+      status: 'Done',
+      startAt: Timestamp.fromDate(new Date('2099-01-01T09:00:00Z')),
+      endAt: Timestamp.fromDate(new Date('2099-01-01T09:45:00Z')),
+    },
+    { assessmentId: 'missing' },
+    { title: '' },
+    { status: 'Unknown' },
+    { endAt: Timestamp.fromDate(new Date('2026-10-19T08:14:00Z')) },
+    { endAt: Timestamp.fromDate(new Date('2026-10-19T11:01:00Z')) },
+    { endAt: Timestamp.fromDate(new Date('2026-10-19T07:45:00Z')) },
+    {
+      startAt: Timestamp.fromDate(new Date('2026-10-19T21:45:00Z')),
+      endAt: Timestamp.fromDate(new Date('2026-10-19T22:15:00Z')),
+    },
+    { extra: true },
+  ])('denies invalid block %j', async (change) => {
+    await linkedSeed();
+    await assertFails(
+      setDoc(doc(owner(), 'users/student-a/studyBlocks/invalid'), { ...blockData(), ...change }),
+    );
+  });
+  it('rejects new archived references but retains existing references and metadata on edits', async () => {
+    await linkedSeed();
+    const db = owner();
+    await setDoc(doc(db, 'users/student-a/classSlots/class-a'), classData());
+    await updateDoc(doc(db, 'users/student-a/subjects/subject-a'), {
+      archived: true,
+      updatedAt: serverTimestamp(),
+    });
+    await assertFails(setDoc(doc(db, 'users/student-a/classSlots/new'), classData()));
+    await assertFails(setDoc(doc(db, 'users/student-a/assessments/new'), assessmentData()));
+    await assertFails(setDoc(doc(db, 'users/student-a/studyBlocks/new'), blockData()));
+    await assertSucceeds(
+      updateDoc(doc(db, 'users/student-a/classSlots/class-a'), {
+        location: 'Room 2',
+        updatedAt: serverTimestamp(),
+      }),
+    );
+    await assertFails(
+      updateDoc(doc(db, 'users/student-a/assessments/assessment-a'), {
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }),
+    );
+    await assertFails(deleteDoc(doc(db, 'users/student-a/assessments/assessment-a')));
   });
 });
 
