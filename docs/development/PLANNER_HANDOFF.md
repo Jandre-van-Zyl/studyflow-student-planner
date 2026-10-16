@@ -4,17 +4,13 @@ Implemented locally on jandre, 16 October 2026, after the requested ECC click-pa
 
 ## Run
 
-Use the existing Node 24/npm/Java 21 setup. Stop any existing dev server before switching modes. From the repository root, in separate terminals:
+Use the existing Node 24/npm/Java 21 setup. Stop existing servers first. From the repository root, one terminal:
 
 ```powershell
-npm run emulators
+npm run dev
 ```
 
-```powershell
-npm run dev:emulator
-```
-
-Register a disposable test account at http://127.0.0.1:5173/account. Add a subject, class, assessment and block, then refresh: records reload from Firestore. A second account starts empty. Synthetic examples and Clear preview appear only in disabled mode (`npm run dev` with the default disabled configuration). No samples are copied to a live account.
+The command starts Auth/Firestore, waits for readiness and opens http://127.0.0.1:5173/account. Register a disposable test account. Add a subject, class, assessment and block, then refresh: records reload from Firestore. A second account starts empty. Ctrl+C stops everything. Synthetic examples/Clear preview appear only in `npm run dev:preview`; no samples are copied to live accounts. Separate-terminal `npm run emulators` plus `npm run dev:emulator` remains an advanced option.
 
 The local emulator is disposable: without export/import, stopping it discards its backend data. Browser refresh persistence does not imply backend-restart persistence or a hosted deployment. Cloud configuration/rules deployment still requires separate authorization and verification. See [Firebase setup](FIREBASE.md).
 

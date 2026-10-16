@@ -7,23 +7,18 @@ No cloud project, account, billing plan or deployment is created by this module.
 Use Node 24.15+ within 24.x (pinned 24.19.0), npm 10/11 and Java 21+. Run npm ci once after updating the branch. At the repository root:
 
 ```powershell
-# Terminal 1
-npm run emulators
+npm run dev
 ```
 
-```powershell
-# Terminal 2
-npm run dev:emulator
-```
-
-Open http://127.0.0.1:5173/account. Register a synthetic email/password account, then use Settings, Subjects, Assessments and Weekly planner. Signed-in records save to private Firestore collections and survive browser refresh. Stop an already running dev server before switching modes. Never reuse an actual account password for these tests. The command forces emulator mode even if `.env.local` contains cloud configuration. No Firebase login, global CLI or firebase init is needed.
+This single command starts Auth/Firestore and their UI, waits for readiness, then opens http://127.0.0.1:5173/account for login/sign-up. Register a synthetic account, then use Settings, Subjects, Assessments and Weekly planner. Signed-in records survive browser refresh. Ctrl+C stops the app and backend together. Stop existing servers before running it; do not also start a separate emulator. It forces emulator mode even if `.env.local` contains cloud configuration. No Firebase login, global CLI or firebase init is needed. Never reuse a real password.
 
 Auth is at 127.0.0.1:9099; Firestore at 127.0.0.1:8080; emulator UI at http://127.0.0.1:4000. The first run may download official emulator artifacts. Ctrl+C stops the services. No import/export is configured: accounts/data are disposable and disappear when the emulators stop. Restarting a browser tab while the emulators are still running preserves that tab's session/profile; stopping the backend is different.
 
 ## Modes and sessions
 
-- `npm run dev` respects VITE_FIREBASE_MODE in the environment and defaults to disabled. This is a layout preview: accounts/settings do not pretend to save data.
-- `npm run dev:emulator` uses Vite's emulator mode to force demo-studyflow. The app ignores cloud values and connects to loopback Auth/Firestore.
+- `npm run dev` manages the local backend and app together, forcing demo-studyflow and opening /account.
+- `npm run dev:emulator` runs only the frontend in forced emulator mode; advanced users may pair it with a separately started `npm run emulators`.
+- `npm run dev:preview` forces disabled mode regardless of local cloud configuration; no backend/account is needed for its labelled layout preview.
 - Cloud mode requires explicit complete public web configuration. A successful local test is not cloud verification.
 
 One shared Firebase app supplies Auth/Firestore. Auth uses browser session persistence: same-tab refresh restores the session; signing out or closing the tab ends it. Profile listeners use confirmed server snapshots and detach on session changes. Private pages wait for a valid profile; failed setup offers retry without registering another account.

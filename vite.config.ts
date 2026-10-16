@@ -6,7 +6,13 @@ import { defineConfig } from 'vite';
 export default defineConfig(({ mode }) => ({
   plugins: [react(), tailwindcss()],
   define:
-    mode === 'emulator' ? { 'import.meta.env.VITE_FIREBASE_MODE': JSON.stringify('emulator') } : {},
+    mode === 'emulator' || mode === 'layout'
+      ? {
+          'import.meta.env.VITE_FIREBASE_MODE': JSON.stringify(
+            mode === 'emulator' ? 'emulator' : 'disabled',
+          ),
+        }
+      : {},
   resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
   build: {
     rolldownOptions: {

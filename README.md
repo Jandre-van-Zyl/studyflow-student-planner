@@ -6,7 +6,7 @@ Software Engineering 2 capstone, Group 1, CTU Training Solutions.
 
 ## Start here
 
-Install **Node.js 24 LTS, version 24.15 or newer within 24.x**, npm 10 or 11, and Git. Tested runtime: Node 24.19.0, recorded in `.nvmrc`. Node 22 does not meet the selected Firebase SDK's dependency requirements. See [setup and troubleshooting](docs/development/SETUP.md) first if you need to update Node.
+Install **Node.js 24 LTS, version 24.15 or newer within 24.x**, npm 10 or 11, Git and **Java 21+** for the local backend. Tested runtime: Node 24.19.0, recorded in `.nvmrc`. Node 22 does not meet the selected Firebase SDK's dependency requirements. See [setup and troubleshooting](docs/development/SETUP.md) first if you need to update Node.
 
 Accept your private-repository invitation, then use your **own branch**. Example for Aneesah:
 
@@ -20,7 +20,7 @@ Copy-Item .env.example .env.local
 npm run dev
 ```
 
-Open **http://127.0.0.1:5173**. The starter works without a Firebase account. `npm ci` installs all locked project dependencies and local dev tools; no global React, Tailwind, TypeScript, Vite or Firebase install is needed.
+`npm run dev` starts local Auth/Firestore emulators first, then opens **http://127.0.0.1:5173/account** for login/sign-up. Use a disposable test account; no Firebase cloud account is needed. `npm ci` installs all locked dependencies and tools; no global React, Tailwind, TypeScript, Vite or Firebase install is needed.
 
 Already cloned and have a clean working tree? Replace `aneesah` below with your branch:
 
@@ -37,21 +37,15 @@ If your local branch does not exist yet, use `git switch --track origin/aneesah`
 
 ## Working accounts and settings
 
-Use Java 21+ and two terminals at the repo root:
+Use Java 21+ and one terminal at the repo root:
 
 ```powershell
-# Terminal 1: disposable local Auth and Firestore
-npm run emulators
-```
-
-```powershell
-# Terminal 2: forces demo mode, ignoring cloud values
-npm run dev:emulator
+npm run dev
 ```
 
 Open http://127.0.0.1:5173/account and register a synthetic test account. Settings saves the display name and all seven daily study budgets. Defaults are zero; choose your own budgets. Sessions survive refresh in the same tab. Sign out when finished. Local accounts/data disappear when the emulators stop.
 
-Ordinary `npm run dev` respects `.env.local` and still defaults to a layout preview without accounts. No Firebase cloud account is needed for local work. Read [Firebase setup](docs/development/FIREBASE.md).
+Ctrl+C stops the app and its emulators together. Do not start a separate emulator alongside `npm run dev`. For layout-only work without Java/backend, use `npm run dev:preview`. Advanced separate-terminal workflow remains `npm run emulators` plus `npm run dev:emulator`. Read [Firebase setup](docs/development/FIREBASE.md).
 
 ## Team and proposed work
 
@@ -98,8 +92,9 @@ docs/proposal/          Prepared Week 1 PDF
 | Command                             | Purpose                                                                         |
 | ----------------------------------- | ------------------------------------------------------------------------------- |
 | `npm ci`                            | Install exact versions from package-lock.json                                   |
-| `npm run dev`                       | Frontend on port 5173; respects configured mode                                 |
-| `npm run dev:emulator`              | Working accounts/settings using the local Auth/Firestore backend                |
+| `npm run dev`                       | Starts local Auth/Firestore and app; opens login/sign-up; Ctrl+C stops all      |
+| `npm run dev:emulator`              | App only in forced emulator mode; requires a separately running backend         |
+| `npm run dev:preview`               | Layout-only frontend; forces disabled mode, no backend needed                   |
 | `npm run check`                     | Format check, lint, types, unit/UI tests and production build                   |
 | `npm test` / `npm run test:watch`   | Run/watch bootstrap and later feature tests                                     |
 | `npm run format`                    | Format maintained source/config/docs                                            |
@@ -114,7 +109,7 @@ The production dependency audit is clear at this baseline; the optional Firebase
 
 ## Firebase and status
 
-Read [FIREBASE.md](docs/development/FIREBASE.md). Default `disabled` mode needs no credentials. `emulator` forces local demo-studyflow and ignores cloud values. `cloud` requires explicit complete public web configuration. No cloud project, billing account or deployment was created.
+Read [FIREBASE.md](docs/development/FIREBASE.md). `npm run dev` forces local emulators and `npm run dev:preview` forces disabled mode. Explicit `cloud` configuration applies to other commands/builds and requires complete public web values. No cloud project, billing account or deployment was created.
 
 Firestore rules permit valid own-profile access and strictly validated own planner collections. Cross-user/unauthenticated access, unknown collections and hard deletes remain denied. Subject-code claims enforce uniqueness atomically. See the [contract](docs/design/Planner_Data_Contract.md). `.env.local` stays outside Git; never put passwords, service-account JSON or private keys in the frontend.
 

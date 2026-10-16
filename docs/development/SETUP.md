@@ -47,7 +47,7 @@ Copy-Item .env.example .env.local
 npm run dev
 ```
 
-Open http://127.0.0.1:5173. Ctrl+C stops the server. No Firebase account is needed for this first run. `npm ci` installs all packages from the lockfile; do not run `npm create vite` or create a nested project.
+The command starts local Auth/Firestore and opens http://127.0.0.1:5173/account for login/sign-up. Java 21+ is required; use a disposable test account. Ctrl+C stops the frontend and emulators together. No Firebase cloud account is needed. For layout-only work without Java, use `npm run dev:preview`. `npm ci` installs all locked packages; do not run `npm create vite` or create a nested project.
 
 ## 3. Already cloned
 
@@ -78,22 +78,22 @@ npm run check
 
 This checks formatting, ESLint, strict TypeScript, unit/UI tests and production build. `npm run format` fixes formatting. Build output dist is ignored. A local build is not deployment or completed capstone acceptance.
 
-## 5. Optional backend development
+## 5. Local backend development
 
-Read [FIREBASE.md](FIREBASE.md). With Java 21+, run `npm run emulators` in one terminal and `npm run dev:emulator` in a second terminal. The latter forces local demo mode without editing `.env.local`. Register a synthetic account, open Settings and save seven daily budgets. Rules allow valid own-profile operations only; other collections need their owners' schemas/tests. No Firebase cloud account or global CLI is required. See the [account handoff](ACCOUNTS_HANDOFF.md).
+Read [FIREBASE.md](FIREBASE.md). `npm run dev` manages the backend and frontend in one terminal; do not start a separate emulator alongside it. An advanced two-terminal workflow remains `npm run emulators` plus `npm run dev:emulator`. Both force demo-studyflow without env edits. Register a synthetic account and exercise private planner/profile saves. No cloud account or global CLI is required. See the [planner handoff](PLANNER_HANDOFF.md).
 
 ## Troubleshooting
 
-| Symptom                                  | Action                                                                                                                                                     |
-| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| npm.ps1 blocked in PowerShell            | Use `npm.cmd ci`, `npm.cmd run dev`, etc.; do not change machine-wide execution policy.                                                                    |
-| EBADENGINE                               | Select Node 24.15+ within 24.x and reopen the terminal. `Get-Command node` shows which runtime is selected.                                                |
-| Repository not found / permission denied | Sign in as the invited account and accept the private-repo invitation.                                                                                     |
-| No package.json                          | Merge origin/Main and run commands at the repository root.                                                                                                 |
-| Lockfile mismatch                        | Pull the paired package.json/package-lock.json change; do not delete the lockfile or use force flags.                                                      |
-| Port 5173 occupied                       | Stop your existing server, or use `npm run dev -- --port 5174`.                                                                                            |
-| Firebase unavailable                     | Disabled mode is valid for UI work. Start emulators for backend work and restart Vite after env changes.                                                   |
-| Firestore permission denied              | Check your authenticated UID. Own valid profile writes are supported; feature collections remain closed until matching schema/rules tests are implemented. |
-| Hosted deep link fails later             | The future SPA rewrite is in firebase.json; actual deployment is separately authorized.                                                                    |
+| Symptom                                  | Action                                                                                                                                                                |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| npm.ps1 blocked in PowerShell            | Use `npm.cmd ci`, `npm.cmd run dev`, etc.; do not change machine-wide execution policy.                                                                               |
+| EBADENGINE                               | Select Node 24.15+ within 24.x and reopen the terminal. `Get-Command node` shows which runtime is selected.                                                           |
+| Repository not found / permission denied | Sign in as the invited account and accept the private-repo invitation.                                                                                                |
+| No package.json                          | Merge origin/Main and run commands at the repository root.                                                                                                            |
+| Lockfile mismatch                        | Pull the paired package.json/package-lock.json change; do not delete the lockfile or use force flags.                                                                 |
+| Port 5173 occupied                       | Stop the existing StudyFlow server before npm run dev; it deliberately keeps a fixed port. For an advanced separate backend, use npm run dev:emulator -- --port 5174. |
+| Firebase unavailable                     | npm run dev starts the backend automatically; check Java 21+ and occupied emulator ports. Use npm run dev:preview for layout-only work.                               |
+| Firestore permission denied              | Check the current authenticated UID, profile and planner schema/reference constraints; do not relax the owner rules.                                                  |
+| Hosted deep link fails later             | The future SPA rewrite is in firebase.json; actual deployment is separately authorized.                                                                               |
 
 Primary references: [Vite](https://vite.dev/guide/), [Tailwind](https://tailwindcss.com/docs/installation/using-vite), [React Router](https://reactrouter.com/start/declarative/installation), [Firebase web](https://firebase.google.com/docs/web/setup), [emulators](https://firebase.google.com/docs/emulator-suite/install_and_configure), [Vitest](https://vitest.dev/guide/). The lockfile, rather than a changing latest-install list, defines the team's package versions.
