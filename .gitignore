@@ -1,0 +1,35 @@
+# Dependencies and generated output
+node_modules/
+dist/
+dist-ssr/
+coverage/
+.vite/
+*.tsbuildinfo
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+*.local
+*.pem
+*.key
+*service-account*.json
+*serviceAccount*.json
+*firebase-adminsdk*.json
+
+# Firebase local/emulator files
+.firebase/
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
+database-debug.log*
+.runtimeconfig.json
+
+# Logs and editor-local files
+*.log
+.idea/
+.vscode/
+*.suo
+*.user
+.DS_Store
+Thumbs.db
