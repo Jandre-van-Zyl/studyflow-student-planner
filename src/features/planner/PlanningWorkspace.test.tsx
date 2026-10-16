@@ -145,4 +145,41 @@ describe('persistent workspace lifecycle', () => {
     expect(screen.queryByText(/Subject saved/)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add subject' })).toBeEnabled();
   });
+  it('retries its own subject after a committed creation loses its acknowledgement', async () => {
+    let reject!: (error: unknown) => void;
+    vi.mocked(savePlannerRecord).mockImplementationOnce(
+      () =>
+        new Promise((_resolve, fail) => {
+          reject = fail;
+        }),
+    );
+    render(tree(context('a'), '/subjects'));
+    act(() => observers[0]!.next(EMPTY_VIEW));
+    fireEvent.click(screen.getByRole('button', { name: 'Add subject' }));
+    fireEvent.change(screen.getByLabelText('Subject name'), {
+      target: { value: 'Saved before acknowledgement' },
+    });
+    fireEvent.change(screen.getByLabelText('Subject code'), { target: { value: 'ACK' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save subject' }));
+    const draft = vi.mocked(savePlannerRecord).mock
+      .calls[0]![2] as PlanningView['subjects'][number];
+    act(() => observers[0]!.next({ ...EMPTY_VIEW, subjects: [draft] }));
+    await act(async () => reject(new Error('Acknowledgement lost')));
+    vi.mocked(savePlannerRecord).mockResolvedValueOnce(draft);
+    fireEvent.click(screen.getByRole('button', { name: 'Save subject' }));
+    await waitFor(() => expect(savePlannerRecord).toHaveBeenCalledTimes(2));
+    expect(vi.mocked(savePlannerRecord).mock.calls[1]![2].id).toBe(draft.id);
+  });
+  it('keeps an open same-owner draft through listener failure and explicit retry', () => {
+    render(tree(context('a'), '/subjects'));
+    act(() => observers[0]!.next(EMPTY_VIEW));
+    fireEvent.click(screen.getByRole('button', { name: 'Add subject' }));
+    fireEvent.change(screen.getByLabelText('Subject name'), {
+      target: { value: 'Keep this draft' },
+    });
+    act(() => observers[0]!.fail(new Error('Disconnected')));
+    fireEvent.click(screen.getByRole('button', { name: 'Retry planner' }));
+    act(() => observers[1]!.next(EMPTY_VIEW));
+    expect(screen.getByLabelText('Subject name')).toHaveValue('Keep this draft');
+  });
 });
