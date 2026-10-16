@@ -14,15 +14,15 @@ function renderAt(path: string) {
 describe('shared starter navigation', () => {
   it('opens the dashboard without Firebase configuration', () => {
     renderAt('/');
-    expect(screen.getByRole('heading', { level: 1, name: /Make room for/ })).toBeInTheDocument();
-    expect(screen.getByText('Foundation preview')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'This week' })).toBeInTheDocument();
+    expect(screen.getByText(/Changes reset on refresh/)).toBeInTheDocument();
   });
 
   it('navigates to an honestly labelled feature workspace', () => {
     renderAt('/dashboard');
     fireEvent.click(screen.getByRole('link', { name: 'Assessments' }));
     expect(screen.getByRole('heading', { level: 1, name: 'Assessments' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Coming next' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add assessment' })).toBeDisabled();
     expect(screen.getByRole('link', { name: 'Assessments' })).toHaveAttribute(
       'aria-current',
       'page',
@@ -33,6 +33,29 @@ describe('shared starter navigation', () => {
     renderAt('/unknown');
     expect(screen.getByRole('heading', { name: 'Page not found' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('link', { name: 'Return to dashboard' }));
-    expect(screen.getByRole('heading', { name: /Make room for/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'This week' })).toBeInTheDocument();
+  });
+
+  it('loads an explicit example week and filters assessments without pretending to save them', () => {
+    renderAt('/dashboard');
+    fireEvent.click(screen.getByRole('button', { name: 'Load example week' }));
+    expect(screen.getByText('Requirements draft')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('link', { name: 'Assessments' }));
+    fireEvent.change(screen.getByLabelText('Search assessments'), { target: { value: 'quiz' } });
+    expect(screen.getAllByText('Revision quiz').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Requirements draft')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
+    expect(screen.getAllByText('Requirements draft').length).toBeGreaterThan(0);
+  });
+
+  it('creates a subject through a labelled form, then permits an assessment', () => {
+    renderAt('/subjects');
+    fireEvent.click(screen.getByRole('button', { name: 'Add subject' }));
+    fireEvent.change(screen.getByLabelText('Subject name'), { target: { value: 'Software Engineering 2' } });
+    fireEvent.change(screen.getByLabelText('Subject code'), { target: { value: 'SE2' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save subject' }));
+    expect(screen.getByText('Software Engineering 2')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('link', { name: 'Assessments' }));
+    expect(screen.getByRole('button', { name: 'Add assessment' })).toBeEnabled();
   });
 });
