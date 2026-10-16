@@ -11,8 +11,8 @@ export function SettingsPage() {
   const { status, user, profile } = useAuth();
   if (status === 'disabled')
     return (
-      <section className="max-w-2xl rounded-3xl border border-slate-200 bg-white p-8">
-        <h1 className="text-3xl font-semibold text-ink">Profile and study budgets</h1>
+      <section className="max-w-[560px] border-y border-line py-8">
+        <h1>Profile and study budgets</h1>
         <p className="mt-4 leading-7">
           Settings are unavailable in this preview. A signed-in account is needed to save your
           profile.
@@ -114,14 +114,9 @@ function ProfileForm({ uid, profile }: { uid: string; profile: UserProfile }) {
   }
 
   return (
-    <section className="max-w-3xl">
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">
-        Make a little room
-      </p>
-      <h1 className="mt-3 text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
-        Profile and study budgets
-      </h1>
-      <p className="mt-3 max-w-2xl leading-7 text-slate-600">
+    <section className="max-w-[560px]">
+      <h1>Profile and study budgets</h1>
+      <p className="mt-3 max-w-2xl leading-7 text-muted">
         Choose how much time you want to set aside each day. A budget is your plan, not a record of
         time already studied.
       </p>
@@ -131,31 +126,26 @@ function ProfileForm({ uid, profile }: { uid: string; profile: UserProfile }) {
           void submit(event);
         }}
         aria-busy={busy}
-        className="mt-7 space-y-6 rounded-3xl border border-slate-200 bg-white p-6 sm:p-8"
+        className="mt-7 space-y-6 rounded-lg border border-line bg-white p-6 sm:p-8"
       >
         {error && (
-          <p role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700">
+          <p role="alert" className="notice notice-error feedback-enter">
             {error}
           </p>
         )}
         {saved && !dirty && (
-          <p role="status" className="rounded-xl bg-teal-50 p-4 text-sm font-medium text-accent">
+          <p role="status" className="notice feedback-enter">
             Profile and study budgets saved.
           </p>
         )}
         {hasRemoteChanges && (
-          <div className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">
+          <div className="notice notice-warning feedback-enter">
             <p role="alert">
               Your profile changed in another session.{' '}
               {dirty ? 'Your unsaved entries are still here. ' : ''}Reload the latest profile before
               saving.
             </p>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={loadLatest}
-              className="mt-3 font-semibold underline"
-            >
+            <button type="button" disabled={busy} onClick={loadLatest} className="text-link mt-3">
               Reload latest profile
             </button>
           </div>
@@ -176,11 +166,11 @@ function ProfileForm({ uid, profile }: { uid: string; profile: UserProfile }) {
         />
         <div>
           <p className="text-sm font-semibold text-ink">Timezone</p>
-          <p className="mt-2 text-sm text-slate-600">Africa/Johannesburg (SAST, UTC+02:00)</p>
+          <p className="mt-2 text-sm text-muted">Africa/Johannesburg (SAST, UTC+02:00)</p>
         </div>
         <fieldset disabled={busy}>
           <legend className="font-semibold text-ink">Daily study budgets</legend>
-          <p className="mt-2 text-sm leading-6 text-slate-500">
+          <p className="mt-2 text-sm leading-6 text-muted">
             Minutes per day, from 0 to 1440. Set 0 for a day when you do not plan to study.
           </p>
           <div className="mt-5 grid gap-5 sm:grid-cols-2">
@@ -208,8 +198,9 @@ function ProfileForm({ uid, profile }: { uid: string; profile: UserProfile }) {
         <div className="flex flex-wrap items-center gap-4">
           <button
             disabled={busy || !dirty || hasRemoteChanges}
+            aria-describedby="settings-save-reason"
             type="submit"
-            className="min-h-11 rounded-xl bg-ink px-6 py-3 font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="btn btn-primary"
           >
             {busy ? 'Saving…' : 'Save profile'}
           </button>
@@ -217,12 +208,21 @@ function ProfileForm({ uid, profile }: { uid: string; profile: UserProfile }) {
             disabled={busy || !dirty}
             type="button"
             onClick={loadLatest}
-            className="min-h-11 font-semibold text-accent underline"
+            className="text-link"
           >
             Discard changes
           </button>
-          {dirty && <span className="text-sm text-slate-500">Unsaved changes</span>}
+          {dirty && <span className="text-sm text-muted">Unsaved changes</span>}
         </div>
+        <p id="settings-save-reason" className="help">
+          {busy
+            ? 'Wait for the server to confirm your save.'
+            : hasRemoteChanges
+              ? 'Reload the latest profile before saving.'
+              : !dirty
+                ? 'Change your name or a budget to enable Save profile.'
+                : 'Save updates your account profile and all seven budgets.'}
+        </p>
       </form>
     </section>
   );

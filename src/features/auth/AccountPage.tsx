@@ -27,8 +27,8 @@ export function AccountPage() {
 
   if (auth.status === 'disabled')
     return (
-      <section className="max-w-2xl rounded-3xl border border-slate-200 bg-white p-8">
-        <h1 className="text-3xl font-semibold text-ink">Your account</h1>
+      <section className="max-w-[560px] border-y border-line py-8">
+        <h1>Your account</h1>
         <p className="mt-4 leading-7">
           Accounts are unavailable in this preview. You can still explore the planner layout.
         </p>
@@ -39,8 +39,8 @@ export function AccountPage() {
     );
   if (auth.status === 'loading' || auth.status === 'profile-loading')
     return (
-      <section className="max-w-2xl rounded-3xl border border-slate-200 bg-white p-8">
-        <h1 className="text-3xl font-semibold text-ink">Opening your account</h1>
+      <section className="max-w-[560px] border-y border-line py-8">
+        <h1>Opening your account</h1>
         <p role="status" className="mt-4">
           {auth.status === 'profile-loading'
             ? 'Loading your private profile…'
@@ -52,9 +52,9 @@ export function AccountPage() {
     return <ProfileRecovery onReady={() => setSubmitted(true)} />;
   if (auth.status === 'error')
     return (
-      <section className="max-w-2xl rounded-3xl border border-slate-200 bg-white p-8">
-        <h1 className="text-3xl font-semibold text-ink">Account unavailable</h1>
-        <p role="alert" className="mt-4 text-red-700">
+      <section className="max-w-[560px] border-y border-line py-8">
+        <h1>Account unavailable</h1>
+        <p role="alert" className="mt-4 text-danger">
           {auth.error}
         </p>
         <p className="mt-3 text-sm leading-6">
@@ -63,7 +63,7 @@ export function AccountPage() {
         <button
           type="button"
           onClick={() => window.location.reload()}
-          className="mt-6 rounded-xl bg-ink px-5 py-3 font-semibold text-white"
+          className="btn btn-primary mt-6"
         >
           Reload account
         </button>
@@ -73,7 +73,7 @@ export function AccountPage() {
             onClick={() => {
               void auth.signOut().catch(() => {});
             }}
-            className="ml-3 mt-3 rounded-xl border border-slate-300 px-5 py-3 font-semibold"
+            className="btn btn-secondary"
           >
             Retry sign out
           </button>
@@ -83,25 +83,17 @@ export function AccountPage() {
   if (auth.status === 'ready' && auth.user && auth.profile) {
     if (submitted || from) return <Navigate to={destination} replace />;
     return (
-      <section className="max-w-2xl rounded-3xl border border-slate-200 bg-white p-8">
-        <p className="text-xs font-semibold uppercase tracking-widest text-accent">
-          Your private account
-        </p>
-        <h1 className="mt-3 break-words text-3xl font-semibold text-ink">
-          Welcome, {auth.profile.displayName}
-        </h1>
-        <p className="mt-3 break-all text-slate-600">{auth.user.email}</p>
+      <section className="max-w-[560px] border-y border-line py-8">
+        <h1>Welcome, {auth.profile.displayName}</h1>
+        <p className="mt-3 break-all text-muted">{auth.user.email}</p>
         <p className="mt-4 text-sm leading-6">
           Your profile and study budgets belong to your account. Times use Africa/Johannesburg.
         </p>
         <div className="mt-7 flex flex-wrap gap-3">
-          <Link to="/settings" className="rounded-xl bg-ink px-5 py-3 font-semibold text-white">
+          <Link to="/settings" className="btn btn-primary">
             Edit profile and budgets
           </Link>
-          <Link
-            to="/dashboard"
-            className="rounded-xl border border-slate-300 px-5 py-3 font-semibold text-ink"
-          >
+          <Link to="/dashboard" className="btn btn-secondary">
             Open dashboard
           </Link>
         </div>
@@ -110,7 +102,7 @@ export function AccountPage() {
           onClick={() => {
             void auth.signOut().catch(() => {});
           }}
-          className="mt-6 font-semibold text-accent underline"
+          className="text-link mt-6"
         >
           Sign out
         </button>
@@ -162,17 +154,12 @@ export function AccountPage() {
 
   return (
     <section className="max-w-xl">
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">
-        A little clarity for your week
-      </p>
-      <h1 className="mt-3 text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
-        {registering ? 'Create your account' : 'Sign in to StudyFlow'}
-      </h1>
-      <p className="mt-3 leading-7 text-slate-600">
+      <h1>{registering ? 'Create your account' : 'Sign in to StudyFlow'}</h1>
+      <p className="mt-3 leading-7 text-muted">
         Your subjects, deadlines and study plans, in your own private workspace.
       </p>
       {auth.mode === 'emulator' && (
-        <p className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <p className="notice notice-warning mt-4">
           Local demo · Use a test email and a password you do not use elsewhere.
         </p>
       )}
@@ -182,10 +169,10 @@ export function AccountPage() {
         }}
         noValidate
         aria-busy={busy}
-        className="mt-6 space-y-5 rounded-3xl border border-slate-200 bg-white p-6 sm:p-8"
+        className="mt-6 space-y-5 rounded-lg border border-line bg-white p-6 sm:p-8"
       >
         {error && (
-          <p role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700">
+          <p role="alert" className="notice notice-error feedback-enter">
             {error}
           </p>
         )}
@@ -246,14 +233,10 @@ export function AccountPage() {
             disabled={busy}
           />
         )}
-        <button
-          disabled={busy}
-          type="submit"
-          className="min-h-11 w-full rounded-xl bg-ink px-5 py-3 font-semibold text-white hover:bg-slate-700 disabled:cursor-wait disabled:opacity-60"
-        >
+        <button disabled={busy} type="submit" className="btn btn-primary w-full">
           {busy ? 'Please wait…' : registering ? 'Create account' : 'Sign in'}
         </button>
-        <p className="text-xs leading-5 text-slate-500">
+        <p className="text-xs leading-5 text-muted">
           This tab remembers your session until you sign out or close it.
         </p>
       </form>
@@ -267,7 +250,7 @@ export function AccountPage() {
           setPassword('');
           setConfirmation('');
         }}
-        className="mt-6 min-h-11 font-semibold text-accent underline"
+        className="text-link mt-6"
       >
         {registering ? 'Already have an account? Sign in' : 'New to StudyFlow? Create an account'}
       </button>
@@ -280,12 +263,12 @@ function ProfileRecovery({ onReady }: { onReady: () => void }) {
   const [name, setName] = useState(auth.setupDisplayName);
   const [error, setError] = useState<string | null>(null);
   return (
-    <section className="max-w-xl rounded-3xl border border-slate-200 bg-white p-8">
-      <h1 className="text-3xl font-semibold text-ink">Finish opening your profile</h1>
+    <section className="max-w-[560px] border-y border-line py-8">
+      <h1>Finish opening your profile</h1>
       <p className="mt-3 break-all text-sm">
         You are signed in as {auth.user?.email}. Your account exists; do not register again.
       </p>
-      <p role="alert" className="mt-4 rounded-xl bg-red-50 p-4 text-sm text-red-700">
+      <p role="alert" className="mt-4 notice notice-error feedback-enter">
         {auth.error}
       </p>
       <form
@@ -311,11 +294,11 @@ function ProfileRecovery({ onReady }: { onReady: () => void }) {
           error={error ?? undefined}
           help="Used only if your profile has not yet been created. Existing profile data is preserved."
         />
-        <button className="rounded-xl bg-ink px-5 py-3 font-semibold text-white" type="submit">
+        <button className="btn btn-primary" type="submit">
           Retry profile
         </button>
         <button
-          className="ml-4 font-semibold text-accent underline"
+          className="btn btn-quiet"
           type="button"
           onClick={() => {
             void auth.signOut().catch(() => {});

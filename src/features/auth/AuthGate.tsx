@@ -7,7 +7,7 @@ export function AuthGate() {
   if (status === 'disabled') return <Outlet />;
   if (status === 'loading' || status === 'profile-loading') {
     return (
-      <p role="status" className="rounded-3xl border border-slate-200 bg-white p-8">
+      <p role="status" className="notice">
         Opening your private workspace…
       </p>
     );

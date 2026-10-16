@@ -1,6 +1,8 @@
-import { NavLink, Outlet } from 'react-router';
+import { useEffect, useRef, useState } from 'react';
+import { NavLink, Outlet, useLocation } from 'react-router';
 import { useAuth } from '@/features/auth/authContext';
 import { Icon, type IconName } from './Icon';
+import { Modal } from './Modal';
 
 const navigation: { to: string; label: string; icon: IconName }[] = [
   { to: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
@@ -12,70 +14,134 @@ const navigation: { to: string; label: string; icon: IconName }[] = [
 ];
 
 export function AppShell() {
-  const { status, profile, mode, signOut } = useAuth();
+  const { status, profile, mode, signOut, user } = useAuth();
+  const location = useLocation();
+  const [menuAt, setMenuAt] = useState<string | null>(null);
+  const main = useRef<HTMLElement>(null);
+  const previousPath = useRef(location.pathname);
+  const privateShell = status === 'ready' || status === 'disabled';
+  const showMenu = privateShell && menuAt === location.key;
+  useEffect(() => {
+    if (previousPath.current !== location.pathname) {
+      main.current?.focus();
+      window.scrollTo?.({ top: 0, behavior: 'instant' });
+      previousPath.current = location.pathname;
+    }
+    document.title = `${navigation.find((item) => item.to === location.pathname)?.label ?? 'Page not found'} · StudyFlow`;
+  }, [location.pathname]);
+  useEffect(() => {
+    const query = window.matchMedia?.('(min-width: 1024px)');
+    const close = () => {
+      if (query?.matches) setMenuAt(null);
+    };
+    query?.addEventListener('change', close);
+    return () => query?.removeEventListener('change', close);
+  }, []);
+  const links = (
+    <nav aria-label="Main navigation" className="space-y-1">
+      {navigation.map(({ to, label, icon }) => (
+        <NavLink key={to} to={to} className="nav-link" onClick={() => setMenuAt(null)}>
+          <Icon name={icon} />
+          <span>{label}</span>
+        </NavLink>
+      ))}
+    </nav>
+  );
+  const brand = (
+    <NavLink
+      to="/dashboard"
+      className="flex min-h-11 w-fit items-center gap-3 text-xl font-semibold text-ink"
+      aria-label="StudyFlow home"
+    >
+      <img src="/favicon.svg" alt="" className="h-8 w-8" />
+      StudyFlow
+    </NavLink>
+  );
   return (
-    <div className="mx-auto min-h-screen max-w-[1600px] p-4 md:p-6 lg:grid lg:grid-cols-[240px_1fr] lg:gap-8">
+    <div
+      className={`mx-auto min-h-dvh max-w-[1280px] px-4 sm:px-6 lg:px-8 ${privateShell ? 'lg:grid lg:grid-cols-[224px_minmax(0,1fr)] lg:gap-8' : ''}`}
+    >
       <a
         href="#main-content"
-        className="sr-only z-50 rounded-lg bg-white p-3 focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
+        className="sr-only z-50 bg-white p-3 focus:not-sr-only focus:fixed focus:top-4 focus:left-4"
       >
         Skip to content
       </a>
-      <aside className="rounded-3xl border border-slate-200 bg-white p-5 lg:sticky lg:top-6 lg:flex lg:h-[calc(100vh-3rem)] lg:flex-col">
-        <NavLink
-          to="/dashboard"
-          className="flex w-fit items-center gap-3 text-xl font-semibold tracking-tight text-ink"
-          aria-label="StudyFlow home"
-        >
-          <img src="/favicon.svg" alt="" className="h-10 w-10" />
-          StudyFlow
-        </NavLink>
-        <p className="mt-2 text-sm text-slate-500">A little clarity for your week.</p>
-        {mode === 'emulator' && (
-          <p className="mt-3 text-xs font-medium text-amber-800">Local demo</p>
-        )}
-        {status === 'ready' && profile && (
-          <div className="mt-5 rounded-xl bg-slate-50 p-3">
-            <p className="break-words text-sm font-semibold text-ink">{profile.displayName}</p>
+      {privateShell ? (
+        <>
+          <aside className="sticky top-0 hidden h-dvh flex-col border-r border-line py-8 pr-6 lg:flex">
+            {brand}
+            <div className="mt-10">{links}</div>
+            <div className="mt-auto border-t border-line pt-5">
+              <p className="break-words text-sm font-semibold text-ink">
+                {profile?.displayName ?? 'Layout preview'}
+              </p>
+              <p className="mt-1 text-xs text-muted">
+                {mode === 'emulator'
+                  ? 'Local demo account'
+                  : status === 'disabled'
+                    ? 'No account connected'
+                    : 'Private account'}
+              </p>
+              {status === 'ready' && (
+                <button
+                  className="text-link text-sm"
+                  onClick={() => {
+                    void signOut().catch(() => {});
+                  }}
+                >
+                  Sign out
+                </button>
+              )}
+            </div>
+          </aside>
+          <header className="flex items-center justify-between gap-3 border-b border-line py-3 lg:hidden">
+            {brand}
             <button
               type="button"
-              onClick={() => {
-                void signOut().catch(() => {});
-              }}
-              className="mt-2 min-h-9 text-sm font-semibold text-accent underline"
+              className="btn btn-secondary"
+              aria-expanded={showMenu}
+              aria-haspopup="dialog"
+              onClick={() => setMenuAt(location.key)}
             >
-              Sign out
+              Menu
             </button>
-          </div>
-        )}
-        <nav
-          aria-label="Main navigation"
-          className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-1"
-        >
-          {navigation.map(({ to, label, icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) =>
-                `flex items-center gap-2 rounded-xl px-3 py-3 text-sm font-medium transition-colors ${isActive ? 'bg-ink text-white' : 'text-slate-600 hover:bg-slate-100'}`
-              }
-            >
-              <Icon name={icon} />
-              <span>{label}</span>
-            </NavLink>
-          ))}
-        </nav>
-        <div className="mt-8 hidden rounded-2xl bg-teal-50 p-4 lg:mt-auto lg:block">
-          <p className="text-sm font-semibold text-accent">Plan a little. Focus a lot.</p>
-          <p className="mt-2 text-xs leading-5 text-slate-600">
-            One place for the work ahead and the time you make for it.
-          </p>
+          </header>
+          {showMenu && (
+            <Modal title="Navigation" drawer onClose={() => setMenuAt(null)}>
+              {links}
+              <p className="mt-8 break-words text-sm text-muted">
+                {profile?.displayName ?? 'Layout preview'}
+              </p>
+              {status === 'ready' && (
+                <button
+                  className="text-link"
+                  onClick={() => {
+                    setMenuAt(null);
+                    void signOut().catch(() => {});
+                  }}
+                >
+                  Sign out
+                </button>
+              )}
+            </Modal>
+          )}
+        </>
+      ) : (
+        <header className="border-b border-line py-5">{brand}</header>
+      )}
+      <main
+        ref={main}
+        id="main-content"
+        tabIndex={-1}
+        className={`min-w-0 py-8 focus:outline-none lg:py-10 ${privateShell ? '' : 'mx-auto max-w-[560px] lg:pt-14'}`}
+      >
+        <div key={user?.uid ?? status}>
+          <Outlet />
         </div>
-      </aside>
-      <main id="main-content" tabIndex={-1} className="min-w-0 py-7 focus:outline-none lg:py-4">
-        <Outlet />
-        <footer className="mt-12 border-t border-slate-200 pt-5 text-xs text-slate-500">
-          StudyFlow · Student Planner · Group 1
+        <footer className="mt-12 flex flex-wrap justify-between gap-2 border-t border-line pt-5 text-xs text-muted">
+          <span>StudyFlow · Group 1</span>
+          <span>All times SAST · UTC+02:00</span>
         </footer>
       </main>
     </div>

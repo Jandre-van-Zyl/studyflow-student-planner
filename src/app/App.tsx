@@ -8,26 +8,29 @@ import { PlannerPage } from '@/features/planner/PlannerPage';
 import { SettingsPage } from '@/features/settings/SettingsPage';
 import { SubjectsPage } from '@/features/subjects/SubjectsPage';
 import { AppShell } from '@/shared/components/AppShell';
+import { PlanningWorkspace } from '@/features/planner/PlanningWorkspace';
 
 export function App() {
   return (
     <AuthProvider>
       <Routes>
         <Route element={<AppShell />}>
-          <Route path="account" element={<AccountPage />} />
-          <Route element={<AuthGate />}>
-            <Route index element={<Navigate to="/dashboard" replace />} />
-            <Route path="dashboard" element={<DashboardPage />} />
-            <Route path="subjects" element={<SubjectsPage />} />
-            <Route path="assessments" element={<AssessmentsPage />} />
-            <Route path="planner" element={<PlannerPage />} />
-            <Route path="settings" element={<SettingsPage />} />
+          <Route element={<PlanningWorkspace />}>
+            <Route path="account" element={<AccountPage />} />
+            <Route element={<AuthGate />}>
+              <Route index element={<Navigate to="/dashboard" replace />} />
+              <Route path="dashboard" element={<DashboardPage />} />
+              <Route path="subjects" element={<SubjectsPage />} />
+              <Route path="assessments" element={<AssessmentsPage />} />
+              <Route path="planner" element={<PlannerPage />} />
+              <Route path="settings" element={<SettingsPage />} />
+            </Route>
           </Route>
           <Route
             path="*"
             element={
-              <section className="rounded-3xl border border-slate-200 bg-white p-8">
-                <h1 className="text-2xl font-semibold text-ink">Page not found</h1>
+              <section>
+                <h1>Page not found</h1>
                 <p className="mt-3">This page is not part of your planner.</p>
                 <Link
                   className="mt-6 inline-block font-semibold text-accent underline"
