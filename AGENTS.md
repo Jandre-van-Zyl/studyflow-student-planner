@@ -10,3 +10,13 @@ README, CONTRIBUTING and docs/development are the current bootstrap/run contract
 - Run npm run check after changes. Account/profile service changes also need npm run test:integration. Rule changes need npm run test:rules and relevant schema/owner cases; UI changes need real browser verification. Report actual outcomes only.
 - Every member needs genuine contributions. Assistant-assisted bootstrap from Jandre's account does not manufacture anyone else's evidence. Never invent research, approval, signatures, test results or submission.
 - Dewald leads; Aneesah takes minutes. Technical ownership remains proposed. Group 1 students are the client; record actual proposal and Firestore assessment feedback.
+
+## ECC workflows
+
+Jandre approved ECC's native Codex plugin setup on 16 October 2026. Each teammate needs their own installation; these repository instructions do not install it. Use only relevant, available skills:
+
+- frontend-patterns for React components, state, forms and responsive behaviour; security-review for auth, input and data ownership changes; tdd-workflow for meaningful behavioural changes; verification-loop before reporting code completion.
+- Adapt workflows to this repository's npm commands, shared Firebase client, profile lifecycle and emulator tests. Generic skill examples do not authorize new dependencies, a different backend, unrelated coverage work or unsupported commands. Use e2e-testing only if a browser test suite is deliberately selected.
+- Preserve direct user instructions and working behaviour. Publishing, hook trust, new services, background automation and delegation require their own applicable authorization. ECC does not override the current keep-local decision.
+- On Jandre's machine, reload C:/Users/USER-PC/Desktop/capstone planning/README.md and project/CURRENT_STATE.md before substantive capstone work. The current local UI/motion specification is project/UI_Design_Guide.md in those notes, version 0.2. UI and animation work remain planning-only until a later implementation instruction. Other members should use the group's reviewed copies and repository planning records.
+- Load skills when their task fits; do not apply every installed workflow to every request. After work, report actual checks and limitations and update the persistent project notes. Installation is distinct from runtime skill discovery and verified connector access.
