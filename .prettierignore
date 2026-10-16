@@ -1,0 +1,9 @@
+node_modules/
+dist/
+coverage/
+.firebase/
+.git/
+package-lock.json
+docs/planning/Student_Planner_*.md
+*.rules
+*.log

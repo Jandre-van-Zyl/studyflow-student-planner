@@ -2,66 +2,116 @@
 
 Software Engineering 2 capstone, Group 1, CTU Training Solutions.
 
-## Current status
+**Shared bootstrap on Main, 16 October 2026.** The React app runs with responsive navigation, six feature workspaces, shared TypeScript contracts, Tailwind, guarded Firebase configuration and development checks. Accounts, saved subjects/assessments, calendar logic and planning insights are **not implemented yet**. Feature pages say “Coming next”; no example records are presented as real student data.
 
-Repository and planning setup only, 16 October 2026. Application implementation has not started. StudyFlow is the proposed project name. The five Group 1 students are the client and primary stakeholders. The proposal is prepared; submission and supervisor approval have not been verified here.
+## Start here
 
-Proposed stack: React + TypeScript + Tailwind CSS using Vite, with Firebase Authentication and Cloud Firestore. Group adoption and acceptance of Firestore for the required database-design evidence still need confirmation. No Firebase project, billing plan, deployment or application test results are supplied by this setup.
+Install **Node.js 24 LTS, version 24.15 or newer within 24.x**, npm 10 or 11, and Git. Tested runtime: Node 24.19.0, recorded in `.nvmrc`. Node 22 does not meet the selected Firebase SDK's dependency requirements. See [setup and troubleshooting](docs/development/SETUP.md) first if you need to update Node.
 
-## Team and branches
-
-| Member | GitHub | Confirmed role | Personal branch |
-| --- | --- | --- | --- |
-| Dewald Van Jaarsveldt | [Dewald-vJ](https://github.com/Dewald-vJ) | Team lead | `dewald` |
-| Aneesah Rehman | [charming-leather](https://github.com/charming-leather) | Minute-taker | `aneesah` |
-| Riaan Jacobs | [helios5455-cmd](https://github.com/helios5455-cmd) | Team member | `riaan` |
-| Jandre Van Zyl | [Jandre-van-Zyl](https://github.com/Jandre-van-Zyl) | Repository owner / team member | `jandre` |
-| Omphemetse Dikeledi | [Theoblac](https://github.com/Theoblac) | Team member | `omphemetse` |
-
-**`Main` is the default integration branch. Its capital M is intentional.** Work on your own branch and open a pull request into `Main`. Have another member review before merging. Keep personal branches after merging; sync them with `Main` before the next task. Branches are shared collaboration conventions, not per-member access restrictions.
-
-Invited teammates must accept GitHub's repository invitation before accessing this private repository. Invitation acceptance is separate from being listed in this table.
-
-## Planned core workflow
-
-Sign in to a private planner, create subjects/classes, record assessment deadlines and remaining effort, inspect explained task priority, reserve study sessions in a weekly view, and interpret workload/clash warnings. Complete work and retain history. Optional extras wait until the accepted core passes.
-
-## Project documents
-
-- [Week 1 proposal PDF](docs/proposal/Group1_Week1.pdf)
-- [Full proposed project plan](docs/planning/Student_Planner_Full_Project_Plan.md)
-- [Requirements and planned tests](docs/planning/Student_Planner_Requirements_and_Tests.md)
-- [Proposed delivery backlog](docs/planning/Student_Planner_Delivery_Backlog.md)
-- [Contribution and Git workflow](CONTRIBUTING.md)
-
-Planning documents describe proposed features, assignments and tests. They are not evidence of completed implementation, actual research findings or passed tests. The setup commits are repository administration, not five members' coding contributions.
-
-## Clone and select your branch
-
-After accepting your invitation, use your own GitHub account:
+Accept your private-repository invitation, then use your **own branch**. Example for Aneesah:
 
 ```powershell
 git clone https://github.com/Jandre-van-Zyl/studyflow-student-planner.git
 cd studyflow-student-planner
 git switch --track origin/aneesah
+git merge origin/Main
+npm ci
+Copy-Item .env.example .env.local
+npm run dev
 ```
 
-Replace `aneesah` with your personal branch from the table. Once that local branch exists, use `git switch aneesah`. There is no `npm install` or app launch command yet because application scaffolding has not been created.
+Open **http://127.0.0.1:5173**. The starter works without a Firebase account. `npm ci` installs all locked project dependencies and local dev tools; no global React, Tailwind, TypeScript, Vite or Firebase install is needed.
 
-## Course checkpoints
+Already cloned and have a clean working tree? Replace `aneesah` below with your branch:
 
-| Date, Africa/Johannesburg | Required checkpoint |
-| --- | --- |
-| Friday 16 October 2026, morning before practical | One-page proposal, `Group1_Week1.pdf`, submitted once by Dewald via Teams to Jabulile Mashibini |
-| Monday 19 October 2026, 12:00 | Separate Week 2 and Week 3 PDFs together; research, SRS/design and real early development with meaningful commits from every member |
-| Friday 23 October 2026, 12:00 | Working Must features, database, walkthrough, dissertation draft and actual testing/evaluation evidence |
-| Thursday 29 October 2026 | Final dissertation, source/evidence and live demonstration; exact final cutoff/presentation arrangements still to confirm |
+```powershell
+git status
+git fetch origin
+git switch aneesah
+git merge origin/Main
+npm ci
+npm run dev
+```
 
-Put this repository URL on page 1 of submissions from Week 2 onward. Arrange supervisor access to the private repository using the supervisor's confirmed GitHub account or the accepted assessment access method; none is assumed or invited by this setup.
+If your local branch does not exist yet, use `git switch --track origin/aneesah`. Copy `.env.example` only if `.env.local` is missing; preserve existing local values. Commit or safely preserve unfinished work before switching or merging. The owner does not automatically advance your remote personal branch.
 
-## Working boundaries
+## Team and proposed work
 
-- Each person makes their own genuine commits and explains their code, decisions and tests.
-- Keep passwords, private keys, Firebase service-account files and local environment values out of Git.
-- Runtime versions, app commands, checks and deployment instructions will be documented when the team authorizes implementation.
-- Original institutional templates and raw participant records are maintained outside this bootstrap; only the prepared project proposal/plans are included here.
+| Member                | GitHub           | Branch       | Proposed module                                   |
+| --------------------- | ---------------- | ------------ | ------------------------------------------------- |
+| Dewald Van Jaarsveldt | Dewald-vJ        | `dewald`     | Assessments; confirmed team lead                  |
+| Aneesah Rehman        | charming-leather | `aneesah`    | Dashboard/advice/workload; confirmed minute-taker |
+| Riaan Jacobs          | helios5455-cmd   | `riaan`      | Subjects and weekly classes                       |
+| Jandre Van Zyl        | Jandre-van-Zyl   | `jandre`     | Accounts, Firebase/security and shared foundation |
+| Omphemetse Dikeledi   | Theoblac         | `omphemetse` | Weekly planner and study blocks                   |
+
+Technical assignments remain proposals. **Main** has a capital M. Each member merges `origin/Main` into their own branch, builds there, then opens a PR back into Main for another member's review. This is the documented workflow; server-enforced branch protection is not configured. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Stack and structure
+
+One root frontend: **React + TypeScript + Tailwind CSS + Vite**, React Router for navigation, and Firebase's modular web SDK for later Auth/Firestore features. No separate API server, Docker or database server is needed for the UI.
+
+```text
+src/
+  app/                  Routes and bootstrap UI tests
+  features/
+    auth/               Account/authentication work
+    subjects/           Subjects and recurring classes
+    assessments/        Assessment CRUD, status and filters
+    planner/            Week view, study blocks and clashes
+    dashboard/          Priority, workload and overview
+    settings/           Profile and daily study budgets
+  shared/
+    components/         Shared layout and UI
+    types/              Persisted document contracts
+  lib/firebase/         Lazy client and explicit mode/config
+  test/                 Browser-test setup
+firebase/               Local rules, indexes and rule tests
+docs/development/       Setup, architecture, Firebase and day-one tasks
+docs/planning/          Detailed proposed plan, requirements and backlog
+docs/proposal/          Prepared Week 1 PDF
+.github/                CI and pull-request template
+```
+
+[Architecture](docs/development/ARCHITECTURE.md) defines module boundaries. [Tomorrow's start plan](docs/development/DAY_ONE.md) gives a small first deliverable per module.
+
+## Commands
+
+| Command                             | Purpose                                                                  |
+| ----------------------------------- | ------------------------------------------------------------------------ |
+| `npm ci`                            | Install exact versions from package-lock.json                            |
+| `npm run dev`                       | Frontend on port 5173                                                    |
+| `npm run check`                     | Format check, lint, types, unit/UI tests and production build            |
+| `npm test` / `npm run test:watch`   | Run/watch bootstrap and later feature tests                              |
+| `npm run format`                    | Format maintained source/config/docs                                     |
+| `npm run build` / `npm run preview` | Build dist / preview on port 4173                                        |
+| `npm run emulators`                 | Optional local Auth/Firestore; Java 21+ required                         |
+| `npm run test:rules`                | Optional temporary Firestore emulator and guard tests; Java 21+ required |
+
+Core checks are also configured for GitHub Actions on Main pushes and PRs targeting Main. Configuration is separate from an actual hosted passing run. Starter tests do not complete the 35 planned capstone acceptance cases.
+
+The production dependency audit is clear at this baseline; the optional Firebase CLI has known development-only audit findings. See [dependency notes](docs/development/DEPENDENCIES.md) for the exact scope and follow-up.
+
+## Firebase and status
+
+Read [FIREBASE.md](docs/development/FIREBASE.md). Default `disabled` mode needs no credentials. `emulator` forces local demo-studyflow and ignores cloud values. `cloud` requires explicit complete public web configuration. No cloud project, billing account or deployment was created.
+
+Firestore rules **deny all reads and writes**, including signed-in owners. Implement/test owner-specific schemas alongside real features; do not open test-mode access. This is a guarded foundation, not working database CRUD. `.env.local` stays outside Git; never put passwords, service-account JSON or private keys in the frontend.
+
+## Project documents and checkpoints
+
+- [Week 1 proposal](docs/proposal/Group1_Week1.pdf): drafted; submission/approval not verified here.
+- [Full proposed plan](docs/planning/Student_Planner_Full_Project_Plan.md)
+- [Requirements and planned tests](docs/planning/Student_Planner_Requirements_and_Tests.md)
+- [Proposed delivery backlog](docs/planning/Student_Planner_Delivery_Backlog.md)
+
+The three plans preserve the 15 October proposed baseline; README/development notes describe the actual 16 October starter. The five students are the client. Actual requirements evidence, final technical assignments, proposal approval and Firestore assessment fit still need recording.
+
+| Date, Africa/Johannesburg            | Checkpoint                                                                                                |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| Fri 16 Oct, before morning practical | One-page proposal, once per group by Dewald via Teams to Jabulile Mashibini                               |
+| Mon 19 Oct, 12:00                    | Separate Week 2 and Week 3 PDFs together; research, SRS/design and each member's meaningful early commits |
+| Fri 23 Oct, 12:00                    | Working Must scope, database, walkthrough, dissertation draft and actual test/evaluation evidence         |
+| Thu 29 Oct                           | Final dissertation/source/evidence and live demo; exact cutoff/presentation details still to confirm      |
+
+Put the repo URL on page 1 from Week 2 onward and arrange accepted assessor access to the private repo. Each member needs genuine feature/test contributions; assistant-assisted setup is not five members' coding evidence.

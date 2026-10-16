@@ -4,6 +4,7 @@ dist/
 dist-ssr/
 coverage/
 .vite/
+.vitest/
 *.tsbuildinfo
 
 # Local configuration and credentials
@@ -23,6 +24,7 @@ firebase-debug.log*
 firestore-debug.log*
 ui-debug.log*
 database-debug.log*
+*-debug.log*
 .runtimeconfig.json
 
 # Logs and editor-local files
