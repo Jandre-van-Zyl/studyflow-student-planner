@@ -5,7 +5,13 @@ import { SelectField } from '@/shared/components/SelectField';
 import { SubjectLabel } from '@/shared/components/PlanningUI';
 import { WEEKDAYS } from '@/features/auth/profileValidation';
 import { usePlanningPreview } from '@/features/planner/previewContext';
-import { displayDay, type ViewClass, type ViewSubject } from '@/features/planner/planningView';
+import {
+  addDays,
+  monday,
+  displayDay,
+  type ViewClass,
+  type ViewSubject,
+} from '@/features/planner/planningView';
 import type { IsoWeekday, SubjectColour } from '@/shared/types/planner';
 
 export function SubjectsPage() {
@@ -14,9 +20,11 @@ export function SubjectsPage() {
   const [subject, setSubject] = useState<ViewSubject | 'new' | null>(null);
   const [slot, setSlot] = useState<ViewClass | 'new' | null>(null);
   const [message, setMessage] = useState('');
+  const [inserted, setInserted] = useState('');
   const active = data.subjects.filter((item) => !item.archived);
   const listed = data.subjects.filter((item) => item.archived === archived);
   function changeSubject(item: ViewSubject) {
+    if (!data.subjects.some((subject) => subject.id === item.id)) setInserted(item.id);
     setData((value) => ({
       ...value,
       subjects: value.subjects.some((s) => s.id === item.id)
@@ -27,6 +35,7 @@ export function SubjectsPage() {
     setMessage('Subject updated in preview.');
   }
   function changeClass(item: ViewClass) {
+    if (!data.classes.some((slot) => slot.id === item.id)) setInserted(item.id);
     setData((value) => ({
       ...value,
       classes: value.classes.some((s) => s.id === item.id)
@@ -80,7 +89,10 @@ export function SubjectsPage() {
       ) : (
         <ul className="divide-y divide-line border-b border-line">
           {listed.map((item) => (
-            <li key={item.id} className="flex flex-wrap items-center justify-between gap-4 py-5">
+            <li
+              key={item.id}
+              className={`flex flex-wrap items-center justify-between gap-4 py-5 ${inserted === item.id ? 'panel-enter' : ''}`}
+            >
               <div className="min-w-0">
                 <SubjectLabel id={item.id} />
                 <h2 className="mt-1 text-lg">{item.name}</h2>
@@ -134,7 +146,10 @@ export function SubjectsPage() {
         ) : (
           <ul className="divide-y divide-line border-y border-line">
             {data.classes.map((item) => (
-              <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-4">
+              <li
+                key={item.id}
+                className={`flex flex-wrap items-center justify-between gap-3 py-4 ${inserted === item.id ? 'panel-enter' : ''}`}
+              >
                 <div>
                   <SubjectLabel id={item.subjectId} />
                   <p className="mt-1 font-semibold tabular-nums">
@@ -370,7 +385,7 @@ function ClassEditor({
             name="from"
             label="Active from"
             type="date"
-            defaultValue={item?.activeFrom ?? day}
+            defaultValue={item?.activeFrom ?? monday(day)}
             required
           />
           <FormField
@@ -378,7 +393,7 @@ function ClassEditor({
             name="to"
             label="Active until"
             type="date"
-            defaultValue={item?.activeTo ?? day}
+            defaultValue={item?.activeTo ?? addDays(monday(day), 6)}
             required
           />
         </div>
@@ -389,7 +404,10 @@ function ClassEditor({
           defaultValue={item?.location}
           maxLength={120}
         />
-        <p className="help">Classes repeat weekly within this date range. Times use SAST.</p>
+        <p className="help">
+          Classes repeat weekly within this date range. Extend Active until for the rest of your
+          term. Times use SAST.
+        </p>
         <div className="flex gap-3">
           <button className="btn btn-primary">Save class</button>
           <button type="button" className="btn btn-secondary" onClick={close}>

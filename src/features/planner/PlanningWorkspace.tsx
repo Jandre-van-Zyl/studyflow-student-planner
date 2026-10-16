@@ -24,32 +24,33 @@ export function PlanningWorkspace() {
           profile?.studyBudgetMinutes ?? (example ? { ...ZERO_BUDGETS, 1: 60 } : ZERO_BUDGETS),
       }}
     >
-      {(status === 'ready' || status === 'disabled') && location.pathname !== '/account' && (
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-line pb-3 text-sm text-muted">
-          <p className="max-w-[190px]">
-            <strong className="font-semibold text-ink">Planner preview</strong>
-            <br />
-            Changes reset on refresh.
-          </p>
-          {hasData ? (
-            <button type="button" className="text-link text-sm" onClick={() => setClearing(true)}>
-              Clear preview
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="text-link text-sm"
-              onClick={() => {
-                setData(exampleView());
-                setExample(true);
-                setDay('2026-10-19');
-              }}
-            >
-              Load example week
-            </button>
-          )}
-        </div>
-      )}
+      {(status === 'ready' || status === 'disabled') &&
+        ['/dashboard', '/subjects', '/assessments', '/planner'].includes(location.pathname) && (
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-line pb-3 text-sm text-muted">
+            <p className="max-w-[190px]">
+              <strong className="font-semibold text-ink">Planner preview</strong>
+              <br />
+              Changes reset on refresh.
+            </p>
+            {hasData ? (
+              <button type="button" className="text-link text-sm" onClick={() => setClearing(true)}>
+                Clear preview
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="text-link text-sm"
+                onClick={() => {
+                  setData(exampleView());
+                  setExample(true);
+                  setDay('2026-10-19');
+                }}
+              >
+                Load example week
+              </button>
+            )}
+          </div>
+        )}
       <div key={location.pathname} className="content-enter">
         <Outlet />
       </div>

@@ -1,0 +1,82 @@
+{
+  "contract": "docs/design/UI_Implementation.md; Desktop capstone planning/project/UI_Design_Guide.md v0.2",
+  "date": "2026-10-16",
+  "branch": "jandre",
+  "publication": "local only",
+  "targetViewports": ["360x800", "768x1024", "1366x900"],
+  "accessibility": {
+    "status": "pass",
+    "evidence": "Targeted browser checks: labelled native forms; main focus after route change; modal initial focus, explicit Tab/Shift+Tab looping, Escape/return focus; conflict and confirmed settings feedback focus. Native semantics and UID/privacy regression tests pass. This is not a full conformance audit."
+  },
+  "responsive": {
+    "status": "pass",
+    "evidence": "Observed 320/360/768/1366 widths, long assessment title, mobile list and selected-day weekends, tablet table, desktop sidebar/week. Recorded document scrollWidth <= innerWidth. True 200% zoom remains unverified."
+  },
+  "contentStates": {
+    "loading": {
+      "status": "pass",
+      "evidence": "Real emulator registration displayed Opening your account / Loading your private profile; existing loading component/provider tests pass."
+    },
+    "empty": {
+      "status": "pass",
+      "evidence": "Initial empty dashboard, no class times, blocked prerequisites and zero budgets; browser no-results filter view and pure zero-data tests pass."
+    },
+    "error": {
+      "status": "pass",
+      "evidence": "Browser incorrect-password local sign-in showed error and retained email; component tests retain denied/conflicting profile drafts."
+    },
+    "partial": {
+      "status": "pass",
+      "evidence": "Rendered AccountPage profile-error fixture preserves the original name and retries profile setup without registering again; executed existing regression test. Not claimed as a new manual backend fault-injection run."
+    },
+    "success": {
+      "status": "pass",
+      "evidence": "Real local emulator registration/sign-in and server-confirmed budget saves observed; success focus verified. Preview updates explicitly say updated in preview."
+    },
+    "permission": {
+      "status": "pass",
+      "evidence": "Executed settings denied-save UI regression keeps draft/no success; AuthGate and preview session-error/UID-switch tests; 43 real-emulator schema/owner rule tests pass. Not claimed as a manually injected browser permission fault."
+    }
+  },
+  "renderedEvidence": [
+    {
+      "viewport": "1366x900",
+      "artifact": "dashboard-desktop.jpg",
+      "observation": "Compiled dashboard, synthetic 19 October agenda and 90 reserved / 60 budget / 30 over; 1 of 3 completed; asymmetric flat sections."
+    },
+    {
+      "viewport": "360x800",
+      "artifact": "dashboard-mobile.jpg",
+      "observation": "Compiled mobile dashboard reflows to one column with compact menu, no document horizontal overflow."
+    },
+    {
+      "viewport": "768x1024",
+      "artifact": "assessments-tablet.jpg",
+      "observation": "Tablet semantic assessment table with long title, real filters and labels."
+    },
+    {
+      "viewport": "1366x900",
+      "artifact": "planner-desktop.jpg",
+      "observation": "Compiled seven-day planner including weekends; flat columns, contextual block editor."
+    }
+  ],
+  "automated": {
+    "app": 114,
+    "rules": 43,
+    "integration": 6,
+    "total": 163,
+    "commands": ["npm run check", "npm run test:rules", "npm run test:integration"]
+  },
+  "motion": {
+    "implemented": true,
+    "normalBrowserObserved": true,
+    "reducedMotionRuleParsed": true,
+    "actualPreferenceSwitchTested": false,
+    "true200PercentZoomTested": false
+  },
+  "limitations": [
+    "Planner data is in-memory preview, not Firebase CRUD.",
+    "OS reduced-motion preference change and true 200 percent zoom not verified.",
+    "No cloud deployment, Main merge, hosted CI or full end-to-end acceptance claim."
+  ]
+}

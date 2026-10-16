@@ -1,5 +1,5 @@
 import { usePlanningPreview } from '@/features/planner/previewContext';
-import { addDays, displayDay, monday } from '@/features/planner/planningView';
+import { addDays, displayDay, monday, sastDay } from '@/features/planner/planningView';
 
 export function SubjectLabel({ id }: { id: string }) {
   const { data } = usePlanningPreview();
@@ -29,16 +29,7 @@ export function WeekControls() {
         >
           ←
         </button>
-        <button
-          className="btn btn-quiet"
-          onClick={() =>
-            setDay(
-              new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Johannesburg' }).format(
-                new Date(),
-              ),
-            )
-          }
-        >
+        <button className="btn btn-quiet" onClick={() => setDay(sastDay())}>
           Today
         </button>
         <button

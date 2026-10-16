@@ -41,6 +41,10 @@ function ProfileForm({ uid, profile }: { uid: string; profile: UserProfile }) {
   const [busy, setBusy] = useState(false);
   const locked = useRef(false);
   const active = useRef(false);
+  const confirmation = useRef<HTMLParagraphElement>(null);
+  useEffect(() => {
+    if (saved) confirmation.current?.focus();
+  }, [saved]);
   useEffect(() => {
     active.current = true;
     return () => {
@@ -134,7 +138,7 @@ function ProfileForm({ uid, profile }: { uid: string; profile: UserProfile }) {
           </p>
         )}
         {saved && !dirty && (
-          <p role="status" className="notice feedback-enter">
+          <p ref={confirmation} tabIndex={-1} role="status" className="notice feedback-enter">
             Profile and study budgets saved.
           </p>
         )}

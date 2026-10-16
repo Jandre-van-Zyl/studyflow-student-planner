@@ -16,6 +16,7 @@ export function AssessmentsPage() {
   const [view, setView] = useState('active');
   const [editing, setEditing] = useState<ViewAssessment | 'new' | null>(null);
   const [message, setMessage] = useState('');
+  const [inserted, setInserted] = useState('');
   const canAdd = data.subjects.some((s) => !s.archived);
   const filtered = data.assessments
     .filter(
@@ -30,6 +31,7 @@ export function AssessmentsPage() {
     )
     .sort((a, b) => a.dueAt.localeCompare(b.dueAt) || a.id.localeCompare(b.id));
   function save(item: ViewAssessment) {
+    if (!data.assessments.some((assessment) => assessment.id === item.id)) setInserted(item.id);
     setData((current) => ({
       ...current,
       assessments: current.assessments.some((a) => a.id === item.id)
@@ -197,7 +199,7 @@ export function AssessmentsPage() {
             </thead>
             <tbody className="divide-y divide-line border-b border-line">
               {filtered.map((item) => (
-                <tr key={item.id}>
+                <tr key={item.id} className={inserted === item.id ? 'panel-enter' : undefined}>
                   <th scope="row" className="py-5 pr-3 align-top font-normal">
                     <span className="font-semibold text-ink">{item.title}</span>
                     <span className="mt-1 block text-xs text-muted">
@@ -219,7 +221,7 @@ export function AssessmentsPage() {
           </table>
           <ul className="divide-y divide-line border-y border-line md:hidden">
             {filtered.map((item) => (
-              <li className="py-5" key={item.id}>
+              <li className={`py-5 ${inserted === item.id ? 'panel-enter' : ''}`} key={item.id}>
                 <div className="flex flex-wrap justify-between gap-2">
                   <SubjectLabel id={item.subjectId} />
                   <Priority value={item.priority} />

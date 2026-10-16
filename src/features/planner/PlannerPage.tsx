@@ -27,6 +27,7 @@ export function PlannerPage() {
   const [editing, setEditing] = useState<ViewBlock | 'new' | null>(null);
   const [showCancelled, setShowCancelled] = useState(false);
   const [message, setMessage] = useState('');
+  const [inserted, setInserted] = useState('');
   const days = Array.from({ length: 7 }, (_, i) => addDays(monday(day), i));
   const canAdd = data.assessments.some(
     (a) =>
@@ -35,6 +36,7 @@ export function PlannerPage() {
       data.subjects.some((s) => s.id === a.subjectId && !s.archived),
   );
   function save(item: ViewBlock) {
+    if (!data.blocks.some((block) => block.id === item.id)) setInserted(item.id);
     setData((current) => ({
       ...current,
       blocks: current.blocks.some((b) => b.id === item.id)
@@ -48,7 +50,10 @@ export function PlannerPage() {
     const block = data.blocks.find((b) => b.id === item.id);
     const future = !!block && Date.parse(block.startAt) > now;
     return (
-      <li key={item.kind + item.id} className="border-t border-line py-4">
+      <li
+        key={item.kind + item.id}
+        className={`border-t border-line py-4 ${inserted === item.id ? 'panel-enter' : ''}`}
+      >
         <p className="text-xs font-semibold text-muted">
           {item.kind} ·{' '}
           <span className="tabular-nums">

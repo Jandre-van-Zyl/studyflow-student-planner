@@ -2,7 +2,7 @@
 
 Software Engineering 2 capstone, Group 1, CTU Training Solutions.
 
-**Account/profile module, 16 October 2026.** Email/password registration, sign-in/out, protected routes, private profile storage and seven-day study-budget editing are implemented. The module includes session cleanup, profile recovery, concurrent-edit protection, schema/ownership rules and tests. Subjects, assessments, calendar logic and planning insights remain workspaces for their owners. Read the [account handoff](docs/development/ACCOUNTS_HANDOFF.md) and [verification record](docs/testing/Jandre_Accounts_Verification_2026-10-16.md). Git/PR history determines integration status; this is not cloud deployment or a completed capstone.
+**UI and account modules, 16 October 2026.** The six routes now use the planned paper/navy/teal design, responsive navigation, accessible forms and CSS motion. Accounts and profile/budget saves use Firebase. Subjects, assessments, study blocks and dashboard calculations are an **interactive session preview**: initially empty, with an explicit Load example week action; planner records reset on refresh/sign-out and have no Firebase persistence yet. Read the [UI handoff](docs/development/UI_HANDOFF.md), [UI verification](docs/testing/UI_Verification_2026-10-16.md) and [account handoff](docs/development/ACCOUNTS_HANDOFF.md). These changes remain local on jandre; they are not merged into Main, deployed or a completed capstone.
 
 ## Start here
 
