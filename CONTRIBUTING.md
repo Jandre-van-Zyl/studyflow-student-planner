@@ -41,7 +41,7 @@ git commit -m "feat(subjects): add subject creation form"
 git push -u origin riaan
 ```
 
-Use actual relevant files/message. `npm run check` covers formatting, lint, types, unit/UI tests and build. Run `npm run format` if needed. Database-rule changes also need `npm run test:rules` and relevant ownership/schema cases. Verify user flows in a browser. Report unrun checks explicitly.
+Use actual relevant files/message. `npm run check` covers formatting, lint, types, unit/UI tests and build. Rule changes also need `npm run test:rules`; account/profile service changes need `npm run test:integration`. Stop manually running emulators before these commands so the test ports are free. CI runs all three checks with Java 21. Verify user flows in a browser and report unrun checks. Read the [account handoff](docs/development/ACCOUNTS_HANDOFF.md) before shared API changes.
 
 Open a PR with **base Main** and **compare your branch**. Explain the concrete result, task/FR IDs, checks and limitations. Another member reviews before the agreed merge. Merge commits retain the individual commit trail. Keep the personal branch and merge updated origin/Main before starting again. The workflow is documented; required-review branch protection is not configured. CI checks Main pushes and PRs targeting Main. No force pushes, resets or rebasing shared history.
 

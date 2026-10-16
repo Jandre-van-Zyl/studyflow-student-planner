@@ -69,9 +69,9 @@ export function DashboardPage() {
         </p>
         <h2 className="mt-3 text-2xl font-semibold">Your planner is taking shape.</h2>
         <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-200">
-          The navigation and shared workspace are ready. Accounts, saved assessments, study sessions
-          and planning insights will be added next. No sample records are presented as your real
-          data.
+          Accounts, private profiles and study budgets are ready when account access is enabled.
+          Subjects, saved assessments, study sessions and planning insights are the next parts for
+          your group to build. No sample records are presented as your real data.
         </p>
       </div>
     </section>

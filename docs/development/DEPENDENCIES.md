@@ -1,10 +1,14 @@
 # Dependency baseline and audit
 
-Reviewed 16 October 2026. Install with npm ci and commit package.json/package-lock.json together when intentionally changing versions. Direct dependencies are exact; the lockfile fixes transitive resolutions. Node 24 LTS (24.15+ within 24.x) is required. Tested locally with Node 24.19.0 and npm 10.9.2; npm 11 is also allowed by the project engines. No system/global runtime was changed during bootstrap verification.
+Reviewed 16 October 2026. Install with npm ci and commit package.json/package-lock.json together when intentionally changing versions. Direct dependencies are exact; the lockfile fixes transitive resolutions. Node 24 LTS (24.15+ within 24.x) is required. Bootstrap was tested with Node 24.19.0/npm 10.9.2; the account/profile module and clean installation were verified with system Node 24.19.0/npm 11.17.0. Both npm 10 and 11 are permitted. No dependency version was changed for this module.
 
 ## Selected application packages
 
-React/React DOM 19.3.1; React Router 8.4.0; Firebase 13.0.0. Build/styling: Vite 8.3.4 and Tailwind 4.3.3. The exact development tool versions are recorded in package.json and the lockfile. Firebase initialization is lazy; the current UI does not perform account/data operations.
+React/React DOM 19.3.1; React Router 8.4.0; Firebase 13.0.0. Build/styling: Vite 8.3.4 and Tailwind 4.3.3. Exact tool versions are in package.json and the lockfile. Backend-enabled mode performs real account/profile operations; disabled mode remains a layout preview. Production vendor chunks preserve strict module execution order because Firebase component registration has initialization side effects; the compiled preview was tested in the browser.
+
+## Project install-script policy
+
+npm 11.17 reported three reviewed install scripts during a fresh setup. package.json now contains version-pinned allowScripts entries for @firebase/util@1.15.3, protobufjs@7.6.6 and re2@1.27.0. These cover Firebase's config/default stub generation, protobuf's compatibility check and the Firebase CLI dependency's native RE2 helper. The installed scripts and npm's version-pinning implementation were inspected before approval. A fresh npm ci passed with no pending-script warnings. This project policy does not change global npm settings or approve future package versions automatically.
 
 ## Reviewed resolution override
 

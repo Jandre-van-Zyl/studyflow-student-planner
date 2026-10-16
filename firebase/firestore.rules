@@ -1,7 +1,39 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Bootstrap guard: owner-specific schemas and tests must replace this before CRUD.
+    function owns(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+    function validBudget(value) {
+      return value is int && value >= 0 && value <= 1440;
+    }
+    function validProfile(data) {
+      return data.keys().hasAll(['displayName', 'timezone', 'studyBudgetMinutes', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['displayName', 'timezone', 'studyBudgetMinutes', 'createdAt', 'updatedAt'])
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 80
+        && data.displayName.matches('^[^\\s\\p{Z}\\x{FEFF}]([^\\r\\n\\x{2028}\\x{2029}]*[^\\s\\p{Z}\\x{FEFF}])?$')
+        && data.timezone == 'Africa/Johannesburg'
+        && data.studyBudgetMinutes is map
+        && data.studyBudgetMinutes.keys().hasAll(['1', '2', '3', '4', '5', '6', '7'])
+        && data.studyBudgetMinutes.keys().hasOnly(['1', '2', '3', '4', '5', '6', '7'])
+        && validBudget(data.studyBudgetMinutes['1']) && validBudget(data.studyBudgetMinutes['2'])
+        && validBudget(data.studyBudgetMinutes['3']) && validBudget(data.studyBudgetMinutes['4'])
+        && validBudget(data.studyBudgetMinutes['5']) && validBudget(data.studyBudgetMinutes['6'])
+        && validBudget(data.studyBudgetMinutes['7'])
+        && data.createdAt is timestamp && data.updatedAt is timestamp
+        && data.updatedAt >= data.createdAt;
+    }
+    match /users/{uid} {
+      allow get: if owns(uid);
+      allow create: if owns(uid) && validProfile(request.resource.data)
+        && request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
+      allow update: if owns(uid) && validProfile(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time;
+      // Listing other profiles and deleting an account/profile are not part of this feature.
+      allow list, delete: if false;
+    }
+    // Feature collections stay closed until their owners add matching schemas/tests.
     match /{document=**} {
       allow read, write: if false;
     }

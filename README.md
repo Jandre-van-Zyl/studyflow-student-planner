@@ -2,7 +2,7 @@
 
 Software Engineering 2 capstone, Group 1, CTU Training Solutions.
 
-**Shared bootstrap on Main, 16 October 2026.** The React app runs with responsive navigation, six feature workspaces, shared TypeScript contracts, Tailwind, guarded Firebase configuration and development checks. Accounts, saved subjects/assessments, calendar logic and planning insights are **not implemented yet**. Feature pages say “Coming next”; no example records are presented as real student data.
+**Account/profile module, 16 October 2026.** Email/password registration, sign-in/out, protected routes, private profile storage and seven-day study-budget editing are implemented. The module includes session cleanup, profile recovery, concurrent-edit protection, schema/ownership rules and tests. Subjects, assessments, calendar logic and planning insights remain workspaces for their owners. Read the [account handoff](docs/development/ACCOUNTS_HANDOFF.md) and [verification record](docs/testing/Jandre_Accounts_Verification_2026-10-16.md). Git/PR history determines integration status; this is not cloud deployment or a completed capstone.
 
 ## Start here
 
@@ -34,6 +34,24 @@ npm run dev
 ```
 
 If your local branch does not exist yet, use `git switch --track origin/aneesah`. Copy `.env.example` only if `.env.local` is missing; preserve existing local values. Commit or safely preserve unfinished work before switching or merging. The owner does not automatically advance your remote personal branch.
+
+## Working accounts and settings
+
+Use Java 21+ and two terminals at the repo root:
+
+```powershell
+# Terminal 1: disposable local Auth and Firestore
+npm run emulators
+```
+
+```powershell
+# Terminal 2: forces demo mode, ignoring cloud values
+npm run dev:emulator
+```
+
+Open http://127.0.0.1:5173/account and register a synthetic test account. Settings saves the display name and all seven daily study budgets. Defaults are zero; choose your own budgets. Sessions survive refresh in the same tab. Sign out when finished. Local accounts/data disappear when the emulators stop.
+
+Ordinary `npm run dev` respects `.env.local` and still defaults to a layout preview without accounts. No Firebase cloud account is needed for local work. Read [Firebase setup](docs/development/FIREBASE.md).
 
 ## Team and proposed work
 
@@ -77,16 +95,18 @@ docs/proposal/          Prepared Week 1 PDF
 
 ## Commands
 
-| Command                             | Purpose                                                                  |
-| ----------------------------------- | ------------------------------------------------------------------------ |
-| `npm ci`                            | Install exact versions from package-lock.json                            |
-| `npm run dev`                       | Frontend on port 5173                                                    |
-| `npm run check`                     | Format check, lint, types, unit/UI tests and production build            |
-| `npm test` / `npm run test:watch`   | Run/watch bootstrap and later feature tests                              |
-| `npm run format`                    | Format maintained source/config/docs                                     |
-| `npm run build` / `npm run preview` | Build dist / preview on port 4173                                        |
-| `npm run emulators`                 | Optional local Auth/Firestore; Java 21+ required                         |
-| `npm run test:rules`                | Optional temporary Firestore emulator and guard tests; Java 21+ required |
+| Command                             | Purpose                                                                         |
+| ----------------------------------- | ------------------------------------------------------------------------------- |
+| `npm ci`                            | Install exact versions from package-lock.json                                   |
+| `npm run dev`                       | Frontend on port 5173; respects configured mode                                 |
+| `npm run dev:emulator`              | Working accounts/settings using the local Auth/Firestore backend                |
+| `npm run check`                     | Format check, lint, types, unit/UI tests and production build                   |
+| `npm test` / `npm run test:watch`   | Run/watch bootstrap and later feature tests                                     |
+| `npm run format`                    | Format maintained source/config/docs                                            |
+| `npm run build` / `npm run preview` | Build dist / preview on port 4173                                               |
+| `npm run emulators`                 | Optional local Auth/Firestore; Java 21+ required                                |
+| `npm run test:rules`                | Firestore profile ownership/schema and retained feature guards; Java 21+        |
+| `npm run test:integration`          | Real local Auth/profile flows, isolation, revisions and offline saves; Java 21+ |
 
 Core checks are also configured for GitHub Actions on Main pushes and PRs targeting Main. Configuration is separate from an actual hosted passing run. Starter tests do not complete the 35 planned capstone acceptance cases.
 
@@ -96,7 +116,13 @@ The production dependency audit is clear at this baseline; the optional Firebase
 
 Read [FIREBASE.md](docs/development/FIREBASE.md). Default `disabled` mode needs no credentials. `emulator` forces local demo-studyflow and ignores cloud values. `cloud` requires explicit complete public web configuration. No cloud project, billing account or deployment was created.
 
-Firestore rules **deny all reads and writes**, including signed-in owners. Implement/test owner-specific schemas alongside real features; do not open test-mode access. This is a guarded foundation, not working database CRUD. `.env.local` stays outside Git; never put passwords, service-account JSON or private keys in the frontend.
+Firestore rules permit only valid own-profile create/get/update at `users/{uid}`. Profile listing/deletion and unfinished feature collections remain denied. Each feature owner adds schema/ownership rules and tests before persistent CRUD. `.env.local` stays outside Git; never put passwords, service-account JSON or private keys in the frontend.
+
+## Account/profile engineering evidence
+
+- [Account architecture, sequence and data dictionary](docs/design/Accounts_and_Profile_Design.md)
+- [Shared API and developer handoff](docs/development/ACCOUNTS_HANDOFF.md)
+- [Executed tests and browser checks](docs/testing/Jandre_Accounts_Verification_2026-10-16.md)
 
 ## Project documents and checkpoints
 

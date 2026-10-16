@@ -1,4 +1,5 @@
 import { NavLink, Outlet } from 'react-router';
+import { useAuth } from '@/features/auth/authContext';
 import { Icon, type IconName } from './Icon';
 
 const navigation: { to: string; label: string; icon: IconName }[] = [
@@ -11,6 +12,7 @@ const navigation: { to: string; label: string; icon: IconName }[] = [
 ];
 
 export function AppShell() {
+  const { status, profile, mode, signOut } = useAuth();
   return (
     <div className="mx-auto min-h-screen max-w-[1600px] p-4 md:p-6 lg:grid lg:grid-cols-[240px_1fr] lg:gap-8">
       <a
@@ -29,6 +31,23 @@ export function AppShell() {
           StudyFlow
         </NavLink>
         <p className="mt-2 text-sm text-slate-500">A little clarity for your week.</p>
+        {mode === 'emulator' && (
+          <p className="mt-3 text-xs font-medium text-amber-800">Local demo</p>
+        )}
+        {status === 'ready' && profile && (
+          <div className="mt-5 rounded-xl bg-slate-50 p-3">
+            <p className="break-words text-sm font-semibold text-ink">{profile.displayName}</p>
+            <button
+              type="button"
+              onClick={() => {
+                void signOut().catch(() => {});
+              }}
+              className="mt-2 min-h-9 text-sm font-semibold text-accent underline"
+            >
+              Sign out
+            </button>
+          </div>
+        )}
         <nav
           aria-label="Main navigation"
           className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-1"

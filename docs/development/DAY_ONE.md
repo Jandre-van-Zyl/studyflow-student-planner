@@ -1,11 +1,11 @@
 # First working session - Saturday 17 October 2026
 
-Proposed starting plan after the shared Main bootstrap. Dewald confirms actual module owners/capacity; Aneesah records decisions. Proposal/supervisor approval and Firestore assessment acceptance need actual evidence, not assumptions.
+Proposed starting plan after the shared bootstrap. Jandre's account/profile module is implemented on his working branch; check its PR/merge status before assuming it is on Main. Dewald confirms actual module owners/capacity; Aneesah records decisions. Proposal/supervisor approval and Firestore assessment acceptance still need actual evidence.
 
 ## Begin together
 
 1. Accept invitations and use your own GitHub identity.
-2. Follow SETUP.md: Node 24, fetch, personal branch, merge origin/Main, npm ci, own .env.local, npm run dev.
+2. Follow SETUP.md: Node 24, fetch your personal branch, merge origin/Main, then npm ci. Use npm run emulators plus npm run dev:emulator to exercise accounts/settings when that module is integrated.
 3. Each member opens their feature route and runs npm run check.
 4. Agree shared fields/status values in src/shared/types/planner.ts and coordinate shared edits.
 5. Confirm genuine needs, small Must scope, available hours and an internal review time.

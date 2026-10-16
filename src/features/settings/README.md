@@ -1,7 +1,7 @@
-# Profile / daily study budgets
+# Profile and daily study budgets
 
-Coordination proposal: Jandre with dashboard owner; FR-02. SettingsPage is a starter route.
+Jandre's implemented editor saves a trimmed display name and exactly seven integer budgets from 0 to 1440 minutes, including zero, with the fixed Africa/Johannesburg timezone. It uses the shared profile service/context, server confirmation and optimistic revision checks.
 
-Use UserProfile/StudyBudgetMinutes, all ISO weekdays 1-7, integer budgets 0-1440 and fixed Africa/Johannesburg timezone. Share the profile service with auth and update workload consumers after changes. Add form/services/tests here; runtime/rules validation is required alongside TypeScript.
+Failed saves preserve inputs. Remote edits do not silently replace a dirty form: reload is explicit. UID changes unmount the previous form and suppress its late acknowledgements. Tests cover boundaries, retries, conflicts and account switching.
 
-First acceptance: accessible seven-day form validation, followed by own-profile persistence and recalculation after integration.
+Dashboard integration remains with Aneesah's module: consume the reactive profile.studyBudgetMinutes from useAuth rather than copying old settings into separate state. Full FR-02 workload-recalculation acceptance remains pending until that view exists. See [handoff](../../../docs/development/ACCOUNTS_HANDOFF.md) and [verification](../../../docs/testing/Jandre_Accounts_Verification_2026-10-16.md).
