@@ -20,7 +20,7 @@ Official sources checked 19 October 2026: [Firebase pricing](https://firebase.go
 
 1. Authorize and enable Email/Password with a compatible password policy. Keep unused providers off; verify safe error handling and actual email templates/domains.
 2. Confirm an available database location and create the default Firestore Standard database with locked production rules. Do not enable test mode.
-3. Implement and verify the chosen verified-email plus team-approved-list access policy. Current code does not yet enforce it. The list must be administered outside untrusted app writes.
+3. The verified-email plus team-approved-list policy is implemented locally. Complete its actual cloud rollout and maintain genuine approved entries outside app-client writes. See [student access setup](STUDENT_ACCESS.md). Local tests do not establish deployed enforcement.
 4. Run relevant rules/integration checks before deploying reviewed rules/indexes to this exact project. Confirm real cloud flows with synthetic records.
 5. Obtain the applicable Hosting release approval, publish the verified cloud bundle, and test its HTTPS URL from another device while local services are stopped.
 

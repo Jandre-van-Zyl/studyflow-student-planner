@@ -25,6 +25,8 @@ export function authFixture(overrides: Partial<AuthContextValue> = {}): AuthCont
     signIn: vi.fn().mockResolvedValue(undefined),
     signOut: vi.fn().mockResolvedValue(undefined),
     retryProfile: vi.fn(),
+    recheckAccess: vi.fn().mockResolvedValue(undefined),
+    sendVerification: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }

@@ -5,7 +5,7 @@ export function AuthGate() {
   const { status, user } = useAuth();
   const location = useLocation();
   if (status === 'disabled') return <Outlet />;
-  if (status === 'loading' || status === 'profile-loading') {
+  if (status === 'loading' || status === 'membership-loading' || status === 'profile-loading') {
     return (
       <p role="status" className="notice">
         Opening your private workspace…

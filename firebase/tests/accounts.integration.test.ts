@@ -7,6 +7,10 @@ import {
   setPersistence,
   signInWithEmailAndPassword,
   signOut,
+  sendEmailVerification,
+  applyActionCode,
+  reload,
+  getIdToken,
   type Auth,
 } from 'firebase/auth';
 import {
@@ -25,6 +29,7 @@ import { defaultStudyBudgets, parseUserProfile } from '@/features/auth/profileVa
 import type { UserProfile } from '@/shared/types/planner';
 import { savePlannerRecord, watchPlanner } from '@/features/planner/plannerService';
 import { exampleView, type PlanningView } from '@/features/planner/planningView';
+import { watchMembership } from '@/features/auth/membershipService';
 
 let live: { app: FirebaseApp; auth: Auth; database: Firestore };
 vi.mock('@/lib/firebase/client', () => ({ getFirebaseServices: () => live }));
@@ -34,8 +39,43 @@ let counter = 0;
 function email() {
   return `local-${Date.now()}-${++counter}@example.test`;
 }
-async function createAccount() {
-  return (await createUserWithEmailAndPassword(live.auth, email(), password)).user;
+async function approveEmail(address: string, active = true) {
+  const host = process.env.FIRESTORE_EMULATOR_HOST;
+  if (!host?.startsWith('127.0.0.1:')) throw new Error('Local Firestore emulator required.');
+  const response = await fetch(
+    `http://${host}/v1/projects/demo-studyflow/databases/(default)/documents/approvedStudents/${encodeURIComponent(address.toLowerCase())}`,
+    {
+      method: 'PATCH',
+      headers: { Authorization: 'Bearer owner', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: { active: { booleanValue: active } } }),
+    },
+  );
+  if (!response.ok) throw new Error('Local approval fixture failed.');
+}
+async function verifyAccount(account: import('firebase/auth').User) {
+  const host = process.env.FIREBASE_AUTH_EMULATOR_HOST;
+  if (!host?.startsWith('127.0.0.1:')) throw new Error('Local Auth emulator required.');
+  await sendEmailVerification(account);
+  const response = await fetch(`http://${host}/emulator/v1/projects/demo-studyflow/oobCodes`);
+  if (!response.ok) throw new Error('Local verification fixture failed.');
+  const { oobCodes } = (await response.json()) as {
+    oobCodes: { email: string; requestType: string; oobCode: string }[];
+  };
+  const code = oobCodes.find(
+    (item) => item.email === account.email && item.requestType === 'VERIFY_EMAIL',
+  )?.oobCode;
+  if (!code) throw new Error('Local verification code not found.');
+  await applyActionCode(live.auth, code);
+  await reload(account);
+  await getIdToken(account, true);
+}
+async function createAccount(approved = true) {
+  const account = (await createUserWithEmailAndPassword(live.auth, email(), password)).user;
+  if (approved) {
+    await approveEmail(account.email!);
+    await verifyAccount(account);
+  }
+  return account;
 }
 async function readProfile(uid: string) {
   return parseUserProfile((await getDocFromServer(doc(live.database, 'users', uid))).data());
@@ -71,6 +111,46 @@ afterAll(async () => {
 });
 
 describe('real Auth/Firestore profile integration', () => {
+  it('requires real verification claims and approval, then denies access after deactivation', async () => {
+    const account = await createAccount(false);
+    await expect(ensureProfile(account.uid, 'Not yet')).rejects.toMatchObject({
+      code: 'permission-denied',
+    });
+    await approveEmail(account.email!);
+    await expect(ensureProfile(account.uid, 'Still unverified')).rejects.toMatchObject({
+      code: 'permission-denied',
+    });
+    await verifyAccount(account);
+    await new Promise<void>((resolve, reject) => {
+      let stop: () => void = () => {};
+      const timer = setTimeout(() => {
+        stop();
+        reject(new Error('Membership timed out'));
+      }, 10000);
+      stop = watchMembership(
+        { uid: account.uid, email: account.email, emailVerified: account.emailVerified },
+        (status) => {
+          if (status === 'approved') {
+            clearTimeout(timer);
+            stop();
+            resolve();
+          }
+        },
+        (error) => {
+          clearTimeout(timer);
+          stop();
+          reject(error);
+        },
+      );
+    });
+    await ensureProfile(account.uid, 'Admitted');
+    expect((await readProfile(account.uid)).displayName).toBe('Admitted');
+    await approveEmail(account.email!, false);
+    await expect(readProfile(account.uid)).rejects.toMatchObject({ code: 'permission-denied' });
+    await expect(ensureProfile(account.uid, 'Revoked')).rejects.toMatchObject({
+      code: 'permission-denied',
+    });
+  });
   it('registers, creates and observes a private profile, then reloads it after signing in again', async () => {
     const account = await createAccount();
     const observed = new Promise<UserProfile>((resolve, reject) => {

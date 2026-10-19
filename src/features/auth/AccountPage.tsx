@@ -4,6 +4,7 @@ import { FormField } from '@/shared/components/FormField';
 import { useAuth } from './authContext';
 import { accountErrorMessage } from './errors';
 import { validateDisplayName } from './profileValidation';
+import { AccessRecovery } from './AccessRecovery';
 
 export function AccountPage() {
   const auth = useAuth();
@@ -37,17 +38,29 @@ export function AccountPage() {
         </Link>
       </section>
     );
-  if (auth.status === 'loading' || auth.status === 'profile-loading')
+  if (
+    auth.status === 'loading' ||
+    auth.status === 'profile-loading' ||
+    auth.status === 'membership-loading'
+  )
     return (
       <section className="max-w-[560px] border-y border-line py-8">
         <h1>Opening your account</h1>
         <p role="status" className="mt-4">
-          {auth.status === 'profile-loading'
-            ? 'Loading your private profile…'
-            : 'Checking your session…'}
+          {auth.status === 'membership-loading'
+            ? 'Checking approved student access…'
+            : auth.status === 'profile-loading'
+              ? 'Loading your private profile…'
+              : 'Checking your session…'}
         </p>
       </section>
     );
+  if (
+    auth.status === 'verification-required' ||
+    auth.status === 'membership-denied' ||
+    auth.status === 'membership-error'
+  )
+    return <AccessRecovery key={auth.user?.uid + ':' + auth.user?.email} />;
   if (auth.status === 'profile-error')
     return <ProfileRecovery onReady={() => setSubmitted(true)} />;
   if (auth.status === 'error')
@@ -157,6 +170,9 @@ export function AccountPage() {
       <h1>{registering ? 'Create your account' : 'Sign in to StudyFlow'}</h1>
       <p className="mt-3 leading-7 text-muted">
         Your subjects, deadlines and study plans, in your own private workspace.
+      </p>
+      <p className="mt-2 text-sm leading-6 text-muted">
+        Student access requires a verified email and approval by the project team.
       </p>
       {auth.mode === 'emulator' && (
         <p className="notice notice-warning mt-4">

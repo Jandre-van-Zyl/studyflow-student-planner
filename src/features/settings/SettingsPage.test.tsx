@@ -8,7 +8,7 @@ import { authFixture, profileFixture } from '@/test/accountFixtures';
 import { SettingsPage } from './SettingsPage';
 
 vi.mock('@/features/auth/profileService', () => ({ saveProfile: vi.fn() }));
-const user = { uid: 'a', email: 'a@example.test' };
+const user = { uid: 'a', email: 'a@example.test', emailVerified: true };
 function context(name = 'Student A', revision = 1) {
   return authFixture({ status: 'ready', user, profile: profileFixture(name, revision) });
 }
@@ -102,7 +102,10 @@ describe('settings editing', () => {
     const view = show();
     change('Display name', 'Old pending');
     fireEvent.click(screen.getByRole('button', { name: 'Save profile' }));
-    view.update({ ...context('Student B'), user: { uid: 'b', email: 'b@example.test' } });
+    view.update({
+      ...context('Student B'),
+      user: { uid: 'b', email: 'b@example.test', emailVerified: true },
+    });
     await act(async () => resolve(profileFixture('Old pending', 2)));
     expect(screen.getByLabelText('Display name')).toHaveValue('Student B');
     expect(screen.queryByRole('status')).not.toBeInTheDocument();

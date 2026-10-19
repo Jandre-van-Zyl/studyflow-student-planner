@@ -13,6 +13,7 @@
     "dev": "firebase emulators:exec --project demo-studyflow --only auth,firestore --ui \"npm run dev:emulator\"",
     "dev:emulator": "vite --mode emulator --host 127.0.0.1 --port 5173 --strictPort --open /account",
     "dev:preview": "vite --mode layout --host 127.0.0.1 --port 5173 --strictPort",
+    "demo:approve": "node scripts/local-student-access.mjs",
     "build": "tsc -b && vite build",
     "build:cloud": "tsc -b && vite build --mode cloud",
     "preview": "vite preview --host 127.0.0.1 --port 4173 --strictPort",

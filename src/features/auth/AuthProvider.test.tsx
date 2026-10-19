@@ -7,13 +7,22 @@ import { useAuth } from './authContext';
 import { registerAccount, signOutAccount, watchCurrentUser, type SessionUser } from './authService';
 import { ensureProfile, watchProfile } from './profileService';
 import type { UserProfile } from '@/shared/types/planner';
+import { watchMembership } from './membershipService';
+import { refreshAccount } from './authService';
+import type { MembershipStatus } from '@/shared/types/membership';
 
 vi.mock('./authService', () => ({
   watchCurrentUser: vi.fn(),
   registerAccount: vi.fn(),
   signInAccount: vi.fn(),
   signOutAccount: vi.fn(),
+  refreshAccount: vi.fn(),
+  sendVerificationEmail: vi.fn(),
 }));
+vi.mock('./membershipService', () => ({ watchMembership: vi.fn() }));
+let membershipNext: (status: MembershipStatus) => void;
+let membershipFail: (error: unknown) => void;
+let membershipStop: Mock<() => void>;
 vi.mock('./profileService', () => ({ watchProfile: vi.fn(), ensureProfile: vi.fn() }));
 let nextUser: (user: SessionUser | null) => void;
 let failUser: (error: unknown) => void;
@@ -24,8 +33,8 @@ let profiles: {
   fail: (error: unknown) => void;
   stop: Mock<() => void>;
 }[];
-const a = { uid: 'a', email: 'a@example.test' };
-const b = { uid: 'b', email: 'b@example.test' };
+const a = { uid: 'a', email: 'a@example.test', emailVerified: true };
+const b = { uid: 'b', email: 'b@example.test', emailVerified: true };
 
 function Consumer() {
   const auth = useAuth();
@@ -50,6 +59,13 @@ function Consumer() {
         Out
       </button>
       <button onClick={() => auth.retryProfile()}>Retry</button>
+      <button
+        onClick={() => {
+          void auth.recheckAccess().catch(() => {});
+        }}
+      >
+        Recheck
+      </button>
     </>
   );
 }
@@ -85,6 +101,13 @@ beforeEach(() => {
   vi.mocked(ensureProfile).mockResolvedValue(undefined);
   vi.mocked(registerAccount).mockResolvedValue(undefined);
   vi.mocked(signOutAccount).mockResolvedValue(undefined);
+  membershipStop = vi.fn();
+  vi.mocked(watchMembership).mockImplementation((_user, next, fail) => {
+    membershipNext = next;
+    membershipFail = fail;
+    next('approved');
+    return membershipStop;
+  });
 });
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -92,6 +115,15 @@ afterEach(() => {
 });
 
 describe('session lifecycle and isolation', () => {
+  it('keeps an admitted workspace mounted on a routine unchanged token refresh', () => {
+    show();
+    user(a);
+    snapshot(profileFixture('A'));
+    user({ ...a });
+    expect(screen.getByTestId('status')).toHaveTextContent('ready');
+    expect(watchProfile).toHaveBeenCalledTimes(1);
+    expect(profiles[0]!.stop).not.toHaveBeenCalled();
+  });
   it('does not observe or create a profile before email verification', () => {
     show();
     const unverified = { ...a, emailVerified: false };
@@ -100,6 +132,90 @@ describe('session lifecycle and isolation', () => {
     expect(watchProfile).not.toHaveBeenCalled();
     expect(ensureProfile).not.toHaveBeenCalled();
     fireEvent.click(screen.getByText('Retry'));
+    expect(watchProfile).not.toHaveBeenCalled();
+  });
+  it('waits for membership and locks private data immediately on revocation', () => {
+    vi.mocked(watchMembership).mockImplementation((_user, next, fail) => {
+      membershipNext = next;
+      membershipFail = fail;
+      return membershipStop;
+    });
+    show();
+    user(a);
+    expect(screen.getByTestId('status')).toHaveTextContent('membership-loading');
+    expect(watchProfile).not.toHaveBeenCalled();
+    act(() => membershipNext('denied'));
+    fireEvent.click(screen.getByText('Retry'));
+    expect(watchProfile).not.toHaveBeenCalled();
+    act(() => membershipNext('approved'));
+    snapshot(profileFixture());
+    expect(screen.getByTestId('status')).toHaveTextContent('ready');
+    act(() => membershipNext('denied'));
+    expect(screen.getByTestId('status')).toHaveTextContent('membership-denied');
+    expect(screen.getByTestId('profile')).toBeEmptyDOMElement();
+    expect(profiles[0]!.stop).toHaveBeenCalled();
+    snapshot(profileFixture('Late'));
+    expect(screen.getByTestId('profile')).toBeEmptyDOMElement();
+  });
+  it('ignores stale membership snapshots from the previous identity', () => {
+    show();
+    user(a);
+    const old = membershipNext;
+    user(b);
+    snapshot(profileFixture('B'));
+    act(() => old('denied'));
+    expect(screen.getByTestId('profile')).toHaveTextContent('B');
+    expect(membershipStop).toHaveBeenCalled();
+  });
+  it('closes ready state if membership verification fails or becomes cached', () => {
+    show();
+    user(a);
+    snapshot(profileFixture());
+    act(() => membershipNext('checking'));
+    expect(screen.getByTestId('profile')).toBeEmptyDOMElement();
+    act(() => membershipFail({ code: 'unavailable' }));
+    expect(screen.getByTestId('status')).toHaveTextContent('membership-error');
+    act(() => membershipNext('approved'));
+    expect(screen.getByTestId('status')).toHaveTextContent('membership-error');
+  });
+  it('times out cached-only membership instead of opening private data', () => {
+    vi.useFakeTimers();
+    vi.mocked(watchMembership).mockImplementation((_user, next) => {
+      next('checking');
+      return membershipStop;
+    });
+    show();
+    user(a);
+    act(() => vi.advanceTimersByTime(15_001));
+    expect(screen.getByTestId('status')).toHaveTextContent('membership-error');
+    expect(watchProfile).not.toHaveBeenCalled();
+    expect(membershipStop).toHaveBeenCalled();
+  });
+  it('rechecks refreshed verification without losing the registration display name', async () => {
+    show();
+    user(null);
+    fireEvent.click(screen.getByText('Register'));
+    user({ ...a, emailVerified: false });
+    vi.mocked(refreshAccount).mockResolvedValue(a);
+    fireEvent.click(screen.getByText('Recheck'));
+    await waitFor(() => expect(watchProfile).toHaveBeenCalled());
+    snapshot(null);
+    await waitFor(() => expect(ensureProfile).toHaveBeenCalledWith('a', 'Chosen name'));
+  });
+  it('ignores a recheck completed after sign-out', async () => {
+    let finish!: (user: SessionUser) => void;
+    vi.mocked(refreshAccount).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    show();
+    user({ ...a, emailVerified: false });
+    fireEvent.click(screen.getByText('Recheck'));
+    fireEvent.click(screen.getByText('Out'));
+    await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('signed-out'));
+    await act(async () => finish(a));
     expect(watchProfile).not.toHaveBeenCalled();
   });
   it('waits for auth and profile before exposing a ready workspace', () => {

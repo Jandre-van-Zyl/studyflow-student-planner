@@ -1,8 +1,22 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function verifiedStudent() {
+      return request.auth != null && request.auth.token.email_verified == true
+        && request.auth.token.email is string && request.auth.token.email.size() <= 254
+        && request.auth.token.email.lower().matches('^[a-z0-9._%+-]+@[a-z0-9.-]+[.][a-z]{2,}$');
+    }
+    function approvedStudent() {
+      let entry = get(/databases/$(database)/documents/approvedStudents/$(request.auth.token.email.lower()));
+      return entry.data.keys().hasOnly(['active']) && entry.data.active == true;
+    }
     function owns(uid) {
-      return request.auth != null && request.auth.uid == uid;
+      return request.auth != null && request.auth.uid == uid
+        && verifiedStudent() && approvedStudent();
+    }
+    match /approvedStudents/{email} {
+      allow get: if verifiedStudent() && request.auth.token.email.lower() == email;
+      allow list, create, update, delete: if false;
     }
     function validBudget(value) {
       return value is int && value >= 0 && value <= 1440;

@@ -228,7 +228,12 @@ describe('planner owner, schema and reference contracts', () => {
       await linkedSeed();
       for (const db of [
         environment.unauthenticatedContext().firestore(),
-        environment.authenticatedContext('student-b').firestore(),
+        environment
+          .authenticatedContext('student-b', {
+            email: 'student-b@example.test',
+            email_verified: true,
+          })
+          .firestore(),
       ]) {
         const ref = doc(db, `users/student-a/${name}/record`);
         await assertFails(getDoc(ref));
@@ -333,6 +338,14 @@ afterAll(async () => {
 });
 beforeEach(async () => {
   await environment.clearFirestore();
+  await environment.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), 'approvedStudents/student-a@example.test'), {
+      active: true,
+    });
+    await setDoc(doc(context.firestore(), 'approvedStudents/student-b@example.test'), {
+      active: true,
+    });
+  });
 });
 
 function validProfile() {
@@ -345,7 +358,9 @@ function validProfile() {
   };
 }
 function owner() {
-  return environment.authenticatedContext('student-a').firestore();
+  return environment
+    .authenticatedContext('student-a', { email: 'student-a@example.test', email_verified: true })
+    .firestore();
 }
 async function seed() {
   await environment.withSecurityRulesDisabled(async (context) => {
@@ -358,6 +373,56 @@ async function seed() {
 }
 
 describe('private profile schema and ownership', () => {
+  it.each(['a/b@example.test', ' a@example.test', 'a@example.test ', 'invalid'])(
+    'rejects unsupported token email: %s',
+    async (email) => {
+      const db = environment
+        .authenticatedContext('student-a', { email, email_verified: true })
+        .firestore();
+      await assertFails(getDoc(doc(db, 'users/student-a')));
+    },
+  );
+  it('admits a verified approved owner with a case-normalized token email', async () => {
+    const db = environment
+      .authenticatedContext('student-a', { email: 'STUDENT-A@EXAMPLE.TEST', email_verified: true })
+      .firestore();
+    await assertSucceeds(setDoc(doc(db, 'users/student-a'), validProfile()));
+  });
+  it.each([{ active: false }, { active: 'true' }, { active: true, role: 'admin' }, {}])(
+    'fails closed for an invalid approval entry: %j',
+    async (value) => {
+      await seed();
+      await environment.withSecurityRulesDisabled(async (context) => {
+        await setDoc(doc(context.firestore(), 'approvedStudents/student-a@example.test'), value);
+      });
+      await assertFails(getDoc(doc(owner(), 'users/student-a')));
+    },
+  );
+  it('denies direct planner access and approval self-promotion after revocation', async () => {
+    await seed();
+    await createSubject();
+    await environment.withSecurityRulesDisabled(async (context) => {
+      await updateDoc(doc(context.firestore(), 'approvedStudents/student-a@example.test'), {
+        active: false,
+      });
+    });
+    const db = owner();
+    for (const collectionName of [
+      'subjects',
+      'classSlots',
+      'assessments',
+      'studyBlocks',
+      'subjectCodes',
+    ]) {
+      await assertFails(getDoc(doc(db, `users/student-a/${collectionName}/one`)));
+      await assertFails(setDoc(doc(db, `users/student-a/${collectionName}/one`), {}));
+    }
+    await assertFails(
+      updateDoc(doc(db, 'approvedStudents/student-a@example.test'), { active: true }),
+    );
+    await assertFails(deleteDoc(doc(db, 'approvedStudents/student-a@example.test')));
+    await assertSucceeds(getDoc(doc(db, 'approvedStudents/student-a@example.test')));
+  });
   it.each([
     { email: 'student-a@example.test', email_verified: false },
     { email: 'unlisted@example.test', email_verified: true },
@@ -366,17 +431,25 @@ describe('private profile schema and ownership', () => {
     await seed();
     const db = environment.authenticatedContext('student-a', claims).firestore();
     await assertFails(getDoc(doc(db, 'users/student-a')));
-    await assertFails(updateDoc(doc(db, 'users/student-a'), {
-      displayName: 'Bypass', updatedAt: serverTimestamp(),
-    }));
+    await assertFails(
+      updateDoc(doc(db, 'users/student-a'), {
+        displayName: 'Bypass',
+        updatedAt: serverTimestamp(),
+      }),
+    );
   });
   it('lets a verified student get only their own approval status', async () => {
     await environment.withSecurityRulesDisabled(async (context) => {
-      await setDoc(doc(context.firestore(), 'approvedStudents/student-a@example.test'), { active: true });
+      await setDoc(doc(context.firestore(), 'approvedStudents/student-a@example.test'), {
+        active: true,
+      });
     });
-    const db = environment.authenticatedContext('student-a', {
-      email: 'STUDENT-A@EXAMPLE.TEST', email_verified: true,
-    }).firestore();
+    const db = environment
+      .authenticatedContext('student-a', {
+        email: 'STUDENT-A@EXAMPLE.TEST',
+        email_verified: true,
+      })
+      .firestore();
     await assertSucceeds(getDoc(doc(db, 'approvedStudents/student-a@example.test')));
     await assertFails(getDoc(doc(db, 'approvedStudents/student-b@example.test')));
     await assertFails(getDocs(collection(db, 'approvedStudents')));
@@ -505,7 +578,12 @@ describe('private profile schema and ownership', () => {
   it('denies another account all profile operations', async () => {
     await seed();
     const reference = doc(
-      environment.authenticatedContext('student-b').firestore(),
+      environment
+        .authenticatedContext('student-b', {
+          email: 'student-b@example.test',
+          email_verified: true,
+        })
+        .firestore(),
       'users/student-a',
     );
     await assertFails(getDoc(reference));

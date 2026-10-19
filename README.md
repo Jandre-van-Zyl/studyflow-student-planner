@@ -45,6 +45,8 @@ npm run dev
 
 Open http://127.0.0.1:5173/account and register a synthetic test account. Settings saves the display name and all seven daily study budgets. Defaults are zero; choose your own budgets. Sessions survive refresh in the same tab. Sign out when finished. Local accounts/data disappear when the emulators stop.
 
+**Student access update, 19 October:** accounts must verify email and have an active approved-list entry before profile/planner access. In the emulator, use **Send verification email**, open the printed local link, then **Check access again**. Approve your synthetic address in a second terminal with `npm run demo:approve -- student@example.test`. Nothing is seeded or auto-approved. Read [student access setup and recovery](docs/development/STUDENT_ACCESS.md).
+
 Ctrl+C stops the app and its emulators together. Do not start a separate emulator alongside `npm run dev`. For layout-only work without Java/backend, use `npm run dev:preview`. Advanced separate-terminal workflow remains `npm run emulators` plus `npm run dev:emulator`. Read [Firebase setup](docs/development/FIREBASE.md).
 
 ## Team and proposed work
@@ -113,7 +115,7 @@ The production dependency audit is clear at this baseline; the optional Firebase
 
 ## Firebase and status
 
-Read [FIREBASE.md](docs/development/FIREBASE.md) and [current cloud setup status](docs/development/CLOUD_PROJECT_STATUS.md). `npm run dev` forces local emulators and `npm run dev:preview` forces disabled mode. Explicit cloud builds require complete public web values. Project `studyflow-ctu-capstone` and its web app are registered on Spark; no billing was linked or app deployed. Authentication, database setup and verified membership remain pending. Maximum permitted spend is zero.
+Read [FIREBASE.md](docs/development/FIREBASE.md) and [current cloud setup status](docs/development/CLOUD_PROJECT_STATUS.md). `npm run dev` forces local emulators and `npm run dev:preview` forces disabled mode. Explicit cloud builds require complete public web values. Project `studyflow-ctu-capstone` and its web app are registered on Spark; no billing was linked or app deployed. Cloud Authentication/database setup and rollout of verified membership remain pending. Maximum permitted spend is zero.
 
 Firestore rules permit valid own-profile access and strictly validated own planner collections. Cross-user/unauthenticated access, unknown collections and hard deletes remain denied. Subject-code claims enforce uniqueness atomically. See the [contract](docs/design/Planner_Data_Contract.md). `.env.local` stays outside Git; never put passwords, service-account JSON or private keys in the frontend.
 

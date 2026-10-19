@@ -66,7 +66,7 @@ describe('account UI', () => {
   it('lets an existing account retry failed profile setup without registering twice', () => {
     const context = authFixture({
       status: 'profile-error',
-      user: { uid: 'a', email: 'a@example.test' },
+      user: { uid: 'a', email: 'a@example.test', emailVerified: true },
       setupDisplayName: 'Original name',
       error: 'Connection failed',
     });
@@ -94,7 +94,7 @@ describe('account UI', () => {
     show(
       authFixture({
         status: 'ready',
-        user: { uid: 'a', email: 'a@example.test' },
+        user: { uid: 'a', email: 'a@example.test', emailVerified: true },
         profile: profileFixture(),
       }),
     );

@@ -24,7 +24,7 @@ describe('private route boundary', () => {
           <AuthContext.Provider
             value={authFixture({
               status: 'ready',
-              user: { uid, email: uid + '@example.test' },
+              user: { uid, email: uid + '@example.test', emailVerified: true },
               profile: profileFixture(uid),
             })}
           >
@@ -50,7 +50,10 @@ describe('private route boundary', () => {
         <AuthContext.Provider
           value={authFixture({
             status,
-            user: status === 'ready' ? { uid: 'a', email: 'a@example.test' } : null,
+            user:
+              status === 'ready'
+                ? { uid: 'a', email: 'a@example.test', emailVerified: true }
+                : null,
             profile: status === 'ready' ? profileFixture() : null,
           })}
         >
@@ -64,15 +67,19 @@ describe('private route boundary', () => {
       </MemoryRouter>,
     );
   }
-  it.each(['signed-out', 'profile-error', 'error'] as const)(
-    'redirects %s sessions away from private pages',
-    (status) => {
-      show(status);
-      expect(screen.getByText('Public sign in')).toBeInTheDocument();
-      expect(screen.queryByText('Private settings')).not.toBeInTheDocument();
-    },
-  );
-  it.each(['loading', 'profile-loading'] as const)(
+  it.each([
+    'signed-out',
+    'verification-required',
+    'membership-denied',
+    'membership-error',
+    'profile-error',
+    'error',
+  ] as const)('redirects %s sessions away from private pages', (status) => {
+    show(status);
+    expect(screen.getByText('Public sign in')).toBeInTheDocument();
+    expect(screen.queryByText('Private settings')).not.toBeInTheDocument();
+  });
+  it.each(['loading', 'membership-loading', 'profile-loading'] as const)(
     'waits during %s without displaying private content',
     (status) => {
       show(status);

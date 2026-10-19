@@ -49,7 +49,7 @@ The code uses strict Firebase chunk execution ordering. Keep that setting when c
 
 ## Membership status
 
-Jandre selected a team-approved list of student email addresses, with email verification and database enforcement. That access-control feature is a separate pending implementation. The current application does not yet enforce the list; do not advertise unrestricted public registration as verified CTU-only access. Actual addresses belong in approved private configuration/administration, not committed synthetic test fixtures or screenshots.
+Verified email plus the team-approved list is implemented and tested locally in the app and rules. Follow [student access setup](STUDENT_ACCESS.md). Cloud enforcement remains pending provider/database setup and deployment of the reviewed app/rules together. Actual addresses belong in private administration, not committed fixtures/screenshots. Team approval is not independent proof of CTU enrolment.
 
 ## References
 

@@ -33,7 +33,7 @@ beforeEach(() => {
 function context(uid: string) {
   return authFixture({
     status: 'ready',
-    user: { uid, email: uid + '@example.test' },
+    user: { uid, email: uid + '@example.test', emailVerified: true },
     profile: profileFixture(uid),
   });
 }

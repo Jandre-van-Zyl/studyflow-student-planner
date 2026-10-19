@@ -6,11 +6,14 @@ import {
   signInAccount,
   signOutAccount,
   watchCurrentUser,
+  refreshAccount,
+  sendVerificationEmail,
   type SessionUser,
 } from './authService';
 import { accountErrorMessage } from './errors';
 import { ensureProfile, watchProfile } from './profileService';
 import { defaultDisplayName, validateDisplayName } from './profileValidation';
+import { watchMembership } from './membershipService';
 
 const cleared = { user: null, profile: null, error: null };
 const PROFILE_TIMEOUT_MS = 15_000;
@@ -38,12 +41,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const current = useRef<SessionUser | null>(null);
   const generation = useRef(0);
   const stopProfile = useRef<() => void>(() => {});
+  const stopMembership = useRef<() => void>(() => {});
+  const accessGeneration = useRef(0);
+  const approvedUid = useRef<string | null>(null);
   const mounted = useRef(false);
   const endingSession = useRef(false);
   const registration = useRef<{ email: string; name: string } | null>(null);
   const profileName = useRef<{ uid: string; name: string } | null>(null);
 
   const loadProfile = useCallback((user: SessionUser, requestedName?: string) => {
+    if (!user.emailVerified || approvedUid.current !== user.uid) return;
     stopProfile.current();
     const attempt = ++generation.current;
     const name =
@@ -57,6 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       mounted.current &&
       !endingSession.current &&
       generation.current === attempt &&
+      approvedUid.current === user.uid &&
       current.current?.uid === user.uid;
     let stop: (() => void) | undefined;
     let stopped = false;
@@ -100,6 +108,90 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const openSession = useCallback(
+    (user: SessionUser | null) => {
+      current.current = user;
+      approvedUid.current = null;
+      ++generation.current;
+      const attempt = ++accessGeneration.current;
+      stopProfile.current();
+      stopMembership.current();
+      if (!user) {
+        profileName.current = null;
+        registration.current = null;
+        setSetupDisplayName('');
+        setState({ ...cleared, status: 'signed-out' });
+        return;
+      }
+      const pending = registration.current;
+      if (pending && pending.email === user.email?.toLowerCase()) {
+        profileName.current = { uid: user.uid, name: pending.name };
+        registration.current = null;
+      } else if (profileName.current?.uid !== user.uid) profileName.current = null;
+      setSetupDisplayName(profileName.current?.name ?? defaultDisplayName(user.email));
+      if (!user.emailVerified) {
+        setState({ status: 'verification-required', user, profile: null, error: null });
+        return;
+      }
+      const valid = () =>
+        mounted.current &&
+        !endingSession.current &&
+        accessGeneration.current === attempt &&
+        current.current?.uid === user.uid;
+      let stop: (() => void) | undefined;
+      let stopped = false;
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const cleanup = () => {
+        stopped = true;
+        clearTimeout(timer);
+        stop?.();
+      };
+      stopMembership.current = cleanup;
+      const lock = (
+        status: 'membership-loading' | 'membership-denied' | 'membership-error',
+        error: string | null = null,
+      ) => {
+        approvedUid.current = null;
+        ++generation.current;
+        stopProfile.current();
+        setState({ status, user, profile: null, error });
+      };
+      const fail = (error: unknown) => {
+        if (!valid() || stopped) return;
+        cleanup();
+        lock('membership-error', accountErrorMessage(error));
+      };
+      lock('membership-loading');
+      timer = setTimeout(() => fail({ code: 'deadline-exceeded' }), PROFILE_TIMEOUT_MS);
+      try {
+        stop = watchMembership(
+          user,
+          (membership) => {
+            if (!valid() || stopped) return;
+            if (membership === 'checking') {
+              lock('membership-loading');
+              timer ??= setTimeout(() => fail({ code: 'deadline-exceeded' }), PROFILE_TIMEOUT_MS);
+              return;
+            }
+            clearTimeout(timer);
+            timer = undefined;
+            if (membership === 'approved') {
+              if (approvedUid.current !== user.uid) {
+                approvedUid.current = user.uid;
+                loadProfile(user);
+              }
+            } else lock('membership-denied');
+          },
+          fail,
+        );
+        if (stopped) stop();
+      } catch (error) {
+        fail(error);
+      }
+    },
+    [loadProfile],
+  );
+
   useEffect(() => {
     mounted.current = true;
     let active = true;
@@ -110,20 +202,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const stop = watchCurrentUser(
       (user) => {
         if (!active || !mounted.current || endingSession.current) return;
-        current.current = user;
-        ++generation.current;
-        stopProfile.current();
-        if (!user) {
-          profileName.current = null;
-          setSetupDisplayName('');
-          setState({ ...cleared, status: 'signed-out' });
+        // Routine token renewal must not discard an admitted student's feature drafts.
+        const previous = current.current;
+        if (
+          user &&
+          previous &&
+          user.uid === previous.uid &&
+          user.email === previous.email &&
+          user.emailVerified === previous.emailVerified
+        )
           return;
-        }
-        const pending = registration.current;
-        const name =
-          pending && pending.email === user.email?.toLowerCase() ? pending.name : undefined;
-        registration.current = null;
-        loadProfile(user, name);
+        openSession(user);
       },
       (error) => {
         if (!active || !mounted.current) return;
@@ -131,6 +220,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profileName.current = null;
         setSetupDisplayName('');
         ++generation.current;
+        ++accessGeneration.current;
+        approvedUid.current = null;
+        stopMembership.current();
         stopProfile.current();
         setState({ ...cleared, status: 'error', error: accountErrorMessage(error) });
       },
@@ -140,8 +232,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       mounted.current = false;
       stop();
       stopProfile.current();
+      stopMembership.current();
+      ++accessGeneration.current;
     };
-  }, [initial.mode, loadProfile]);
+  }, [initial.mode, openSession]);
 
   const value: AuthContextValue = {
     ...state,
@@ -165,6 +259,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       profileName.current = null;
       setSetupDisplayName('');
       ++generation.current;
+      ++accessGeneration.current;
+      approvedUid.current = null;
+      stopMembership.current();
       stopProfile.current();
       setState({ ...cleared, status: 'loading' });
       try {
@@ -181,6 +278,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     retryProfile: (name) => {
       const user = current.current;
       if (user) loadProfile(user, name ? validateDisplayName(name) : undefined);
+    },
+    sendVerification: sendVerificationEmail,
+    recheckAccess: async () => {
+      const attempt = accessGeneration.current;
+      const refreshed = await refreshAccount();
+      if (mounted.current && !endingSession.current && accessGeneration.current === attempt)
+        openSession(refreshed);
     },
   };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

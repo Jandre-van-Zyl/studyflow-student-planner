@@ -3,7 +3,17 @@ import type { UserProfile } from '@/shared/types/planner';
 import type { SessionUser } from './authService';
 
 export type SessionStatus =
-  'disabled' | 'loading' | 'signed-out' | 'profile-loading' | 'profile-error' | 'ready' | 'error';
+  | 'disabled'
+  | 'loading'
+  | 'signed-out'
+  | 'verification-required'
+  | 'membership-loading'
+  | 'membership-denied'
+  | 'membership-error'
+  | 'profile-loading'
+  | 'profile-error'
+  | 'ready'
+  | 'error';
 export interface SessionState {
   status: SessionStatus;
   user: SessionUser | null;
@@ -17,6 +27,8 @@ export interface AuthContextValue extends SessionState {
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   retryProfile: (name?: string) => void;
+  recheckAccess: () => Promise<void>;
+  sendVerification: () => Promise<void>;
 }
 export const AuthContext = createContext<AuthContextValue | null>(null);
 export function useAuth(): AuthContextValue {

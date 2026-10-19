@@ -1,5 +1,7 @@
 # Persistent planner handoff
 
+**19 October access update:** account/profile/planner admission now requires verified email and an active approved-student entry. Follow [STUDENT_ACCESS.md](STUDENT_ACCESS.md) before the older registration steps below. The same policy applies in emulators; there is no auto-approval. Existing document schemas/services remain unchanged. Cloud deployment remains pending.
+
 Implemented locally on jandre, 16 October 2026, after the requested ECC click-path-audit → contract-first → security-review workflow. This supersedes the earlier UI handoff's preview-only data boundary. No packages, cloud resources or profile settings were added. Technical ownership remains proposed; this work is not teammates' contribution evidence.
 
 ## Run

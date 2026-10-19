@@ -13,6 +13,8 @@ README, CONTRIBUTING and docs/development are the current bootstrap/run contract
 
 ## ECC workflows
 
+19 October student-access update: private profile/planner access requires verified email and an exact active approvedStudents entry, independently enforced in rules. Read docs/design/Student_Access_Contract.md and docs/development/STUDENT_ACCESS.md. Local testing also requires explicit verification/approval; demo:approve targets only the loopback demo-studyflow emulator. Preserve server-confirmed admission, membership revocation and all existing owner/revision/listener guards. No cloud enforcement is implied until app/rules deployment. Maximum spend is zero; never link billing or upgrade to Blaze.
+
 Jandre approved ECC's native Codex plugin setup on 16 October 2026. Each teammate needs their own installation; these repository instructions do not install it. Use only relevant, available skills:
 
 - frontend-patterns for React components, state, forms and responsive behaviour; security-review for auth, input and data ownership changes; tdd-workflow for meaningful behavioural changes; verification-loop before reporting code completion.

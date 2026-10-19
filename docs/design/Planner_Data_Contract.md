@@ -1,5 +1,7 @@
 # Planner data contract v1
 
+**19 October authorization addition:** the private entity schemas below are unchanged. Access also requires a verified Firebase email and administrator-maintained `approvedStudents/{normalizedEmail}` with exactly one Boolean field, `active`. This top-level administrative collection is outside the private `users/{uid}` tree; email matching comes from the Auth token, not a stored foreign key. See [Student_Access_Contract.md](Student_Access_Contract.md) and the [verification record](../testing/Student_Access_Verification_2026-10-19.md). Update assessment ERD/dictionary copies during integration to reflect this addition; earlier exported diagrams are dated prior snapshots.
+
 16 October 2026. Consumers are Subjects & classes, Assessments, Planner and Dashboard. The shared TypeScript types in `src/shared/types/planner.ts` are authoritative; all consumers share one build. Runtime parsing, service adapters and Firestore rules must enforce the same semantics. No HTTP server, schema generator or new dependency is needed.
 
 Jandre is implementing this local boundary at the user's request. Proposed module responsibilities remain subject to team agreement; this does not manufacture other members' contributions. Dewald coordinates team review. Changes to fields, enums or semantics require a coordinated types/validator/rules/tests update before consumers change. Existing accounts/profile contracts are preserved.

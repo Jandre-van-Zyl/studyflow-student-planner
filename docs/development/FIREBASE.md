@@ -2,6 +2,8 @@
 
 No cloud project, account, billing plan or deployment is created by this module. Local development uses the existing demo-studyflow backend.
 
+**19 October access policy:** profiles and planner records require verified email and an active team-approved-list entry. Follow [student access instructions](STUDENT_ACCESS.md) for local verification/approval and trusted cloud administration. The same rules apply to both environments; there is no emulator bypass. Current real project/web registration is documented in [cloud status](CLOUD_PROJECT_STATUS.md); provider/database/deployment remain pending.
+
 ## Run accounts and the persistent planner
 
 Use Node 24.15+ within 24.x (pinned 24.19.0), npm 10/11 and Java 21+. Run npm ci once after updating the branch. At the repository root:
