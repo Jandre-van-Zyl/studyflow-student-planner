@@ -69,6 +69,7 @@ describe('persistent workspace lifecycle', () => {
     expect(screen.getByText('Loading your saved planner…')).toBeInTheDocument();
     act(() => observers[1]!.next(EMPTY_VIEW));
     expect(screen.queryByRole('button', { name: 'Load example week' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/load the example week above/)).not.toBeInTheDocument();
   });
   it('unmounts private records and the navigation when the session fails', () => {
     const view = render(tree(context('a')));
