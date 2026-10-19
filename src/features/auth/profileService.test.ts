@@ -110,6 +110,22 @@ describe('profile persistence boundaries', () => {
     );
     expect(transaction.update.mock.calls[0]?.[1]).not.toHaveProperty('createdAt');
   });
+  it('does not confirm the old listener view after a committed budget update', async () => {
+    const before = profileFixture();
+    const after = profileFixture('Student A', 2);
+    after.studyBudgetMinutes[1] = 60;
+    // A server-backed active listener can still expose its pre-commit view.
+    vi.mocked(getDocFromServer).mockResolvedValue({
+      exists: () => true,
+      data: () => before,
+    } as unknown as Awaited<ReturnType<typeof getDocFromServer>>);
+    transaction.get
+      .mockResolvedValueOnce({ exists: () => true, data: () => before })
+      .mockResolvedValueOnce({ exists: () => true, data: () => after });
+    const saved = await saveProfile('a', after, before.updatedAt);
+    expect(saved.studyBudgetMinutes[1]).toBe(60);
+    expect(saved.updatedAt.isEqual(after.updatedAt)).toBe(true);
+  });
   it('ignores cache-only, pending-write and previous-owner snapshots', () => {
     let notify!: (snapshot: unknown) => void;
     vi.mocked(onSnapshot).mockImplementation((...args: unknown[]) => {

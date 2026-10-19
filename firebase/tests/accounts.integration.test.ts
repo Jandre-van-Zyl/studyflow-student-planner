@@ -206,6 +206,39 @@ describe('real Auth/Firestore profile integration', () => {
     ).rejects.toThrow('another session');
     expect((await readProfile(account.uid)).displayName).toBe('Saved name');
   });
+  it('confirms a new budget while the existing profile listener is still active', async () => {
+    const account = await createAccount();
+    await ensureProfile(account.uid, 'Listening student');
+    let initial!: UserProfile;
+    let stop: () => void = () => {};
+    try {
+      await new Promise<void>((resolve, reject) => {
+        stop = watchProfile(
+          account.uid,
+          (profile) => {
+            if (profile) {
+              initial = profile;
+              resolve();
+            }
+          },
+          reject,
+        );
+      });
+      const budgets = { ...defaultStudyBudgets(), 1: 60 };
+      const saved = await saveProfile(
+        account.uid,
+        {
+          displayName: initial.displayName,
+          studyBudgetMinutes: budgets,
+        },
+        initial.updatedAt,
+      );
+      expect(saved.studyBudgetMinutes[1]).toBe(60);
+      expect(saved.updatedAt.isEqual(initial.createdAt)).toBe(false);
+    } finally {
+      stop();
+    }
+  });
   it('keeps another account out through both the service and direct Firestore SDK', async () => {
     const first = await createAccount();
     await ensureProfile(first.uid, 'First student');
