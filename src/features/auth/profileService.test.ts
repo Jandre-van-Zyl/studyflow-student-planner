@@ -98,7 +98,9 @@ describe('profile persistence boundaries', () => {
   it('returns confirmed server data and preserves immutable creation time', async () => {
     const before = profileFixture();
     const after = profileFixture('Saved', 2);
-    transaction.get.mockResolvedValue({ exists: () => true, data: () => before });
+    transaction.get
+      .mockResolvedValueOnce({ exists: () => true, data: () => before })
+      .mockResolvedValueOnce({ exists: () => true, data: () => after });
     vi.mocked(getDocFromServer).mockResolvedValue({
       exists: () => true,
       data: () => after,

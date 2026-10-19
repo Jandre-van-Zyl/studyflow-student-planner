@@ -90,7 +90,9 @@ export async function saveProfile(
     if (!current.updatedAt.isEqual(expectedUpdatedAt)) throw new ProfileConflictError();
     transaction.update(reference, { ...valid, updatedAt: serverTimestamp() });
   });
-  const confirmed = await getDocFromServer(reference);
+  // A one-shot listener can reuse the pre-commit view of an already-active
+  // listener. A separate read-only transaction confirms the committed revision.
+  const confirmed = await runTransaction(database, (transaction) => transaction.get(reference));
   if (auth.currentUser?.uid !== uid)
     throw new Error('The account changed before save confirmation.');
   if (!confirmed.exists()) throw new Error('The saved profile could not be confirmed.');

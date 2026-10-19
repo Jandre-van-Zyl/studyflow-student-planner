@@ -193,7 +193,8 @@ export async function savePlannerRecord<K extends PlannerKind>(
       updatedAt: serverTimestamp(),
     });
   });
-  const confirmed = await getDocFromServer(ref);
+  // Do not acknowledge the older view of an active document listener.
+  const confirmed = await runTransaction(database, (tx) => tx.get(ref));
   if (auth.currentUser?.uid !== uid)
     throw new PlannerError('session', 'The account changed before save confirmation.');
   if (!confirmed.exists()) throw new Error('Save could not be confirmed.');
