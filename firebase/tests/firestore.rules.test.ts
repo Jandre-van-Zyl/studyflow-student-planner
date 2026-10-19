@@ -358,6 +358,30 @@ async function seed() {
 }
 
 describe('private profile schema and ownership', () => {
+  it.each([
+    { email: 'student-a@example.test', email_verified: false },
+    { email: 'unlisted@example.test', email_verified: true },
+    {},
+  ])('denies profile access without verified approved membership: %j', async (claims) => {
+    await seed();
+    const db = environment.authenticatedContext('student-a', claims).firestore();
+    await assertFails(getDoc(doc(db, 'users/student-a')));
+    await assertFails(updateDoc(doc(db, 'users/student-a'), {
+      displayName: 'Bypass', updatedAt: serverTimestamp(),
+    }));
+  });
+  it('lets a verified student get only their own approval status', async () => {
+    await environment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'approvedStudents/student-a@example.test'), { active: true });
+    });
+    const db = environment.authenticatedContext('student-a', {
+      email: 'STUDENT-A@EXAMPLE.TEST', email_verified: true,
+    }).firestore();
+    await assertSucceeds(getDoc(doc(db, 'approvedStudents/student-a@example.test')));
+    await assertFails(getDoc(doc(db, 'approvedStudents/student-b@example.test')));
+    await assertFails(getDocs(collection(db, 'approvedStudents')));
+    await assertFails(setDoc(doc(db, 'approvedStudents/student-a@example.test'), { active: true }));
+  });
   it('allows an owner to read a missing profile for idempotent setup', async () => {
     const snapshot = await assertSucceeds(getDoc(doc(owner(), 'users/student-a')));
     expect(snapshot.exists()).toBe(false);

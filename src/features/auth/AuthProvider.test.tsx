@@ -92,6 +92,16 @@ afterEach(() => {
 });
 
 describe('session lifecycle and isolation', () => {
+  it('does not observe or create a profile before email verification', () => {
+    show();
+    const unverified = { ...a, emailVerified: false };
+    user(unverified);
+    expect(screen.getByTestId('status')).toHaveTextContent('verification-required');
+    expect(watchProfile).not.toHaveBeenCalled();
+    expect(ensureProfile).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByText('Retry'));
+    expect(watchProfile).not.toHaveBeenCalled();
+  });
   it('waits for auth and profile before exposing a ready workspace', () => {
     show();
     expect(screen.getByTestId('status')).toHaveTextContent('loading');
