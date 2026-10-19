@@ -27,7 +27,7 @@ export function AppShell() {
       window.scrollTo?.({ top: 0, behavior: 'instant' });
       previousPath.current = location.pathname;
     }
-    document.title = `${navigation.find((item) => item.to === location.pathname)?.label ?? 'Page not found'} · StudyFlow`;
+    document.title = `${navigation.find((item) => item.to === location.pathname)?.label ?? 'Page not found'} · StudyFlow for CTU`;
   }, [location.pathname]);
   useEffect(() => {
     const query = window.matchMedia?.('(min-width: 1024px)');
@@ -51,10 +51,13 @@ export function AppShell() {
     <NavLink
       to="/dashboard"
       className="flex min-h-11 w-fit items-center gap-3 text-xl font-semibold text-ink"
-      aria-label="StudyFlow home"
+      aria-label="StudyFlow for CTU home"
     >
       <img src="/favicon.svg" alt="" className="h-8 w-8" />
-      StudyFlow
+      <span>
+        <span className="block">StudyFlow</span>
+        <span className="block text-xs font-normal text-muted">CTU student planner</span>
+      </span>
     </NavLink>
   );
   return (
@@ -140,7 +143,7 @@ export function AppShell() {
           <Outlet />
         </div>
         <footer className="mt-12 flex flex-wrap justify-between gap-2 border-t border-line pt-5 text-xs text-muted">
-          <span>StudyFlow · Group 1</span>
+          <span>CTU student planner · Group 1 capstone</span>
           <span>All times SAST · UTC+02:00</span>
         </footer>
       </main>

@@ -169,10 +169,10 @@ export function AccountPage() {
     <section className="max-w-xl">
       <h1>{registering ? 'Create your account' : 'Sign in to StudyFlow'}</h1>
       <p className="mt-3 leading-7 text-muted">
-        Your subjects, deadlines and study plans, in your own private workspace.
+        Plan your CTU modules, deadlines and study time in one private workspace.
       </p>
       <p className="mt-2 text-sm leading-6 text-muted">
-        Student access requires a verified email and approval by the project team.
+        Use your team-approved student email. Verify it to open your planner.
       </p>
       {auth.mode === 'emulator' && (
         <p className="notice notice-warning mt-4">

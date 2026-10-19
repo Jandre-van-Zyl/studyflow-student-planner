@@ -15,7 +15,7 @@ import { useCurrentTime } from '@/shared/hooks/useCurrentTime';
 
 export function DashboardPage() {
   const now = useCurrentTime();
-  const { data, day, setDay, budgets } = usePlanningPreview();
+  const { data, day, setDay, budgets, preview } = usePlanningPreview();
   const { profile } = useAuth();
   const agenda = agendaForDay(data, day);
   const progress = completion(data);
@@ -109,7 +109,9 @@ export function DashboardPage() {
               <p className="mt-2 text-sm text-muted">
                 {activeSubjects
                   ? 'Add a class or reserve a study block for something you need to finish.'
-                  : 'Start by adding your subjects, or load the example week above to explore.'}
+                  : preview
+                    ? 'Start by adding your subjects, or load the example week above to explore.'
+                    : 'Start by adding your subjects, then add class times and assessment deadlines.'}
               </p>
               <Link
                 className="text-link mt-3 text-sm"
