@@ -1,20 +1,51 @@
+/// <reference types="node" />
+import { spawnSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import process from 'node:process';
-import { loadConfigFromFile } from 'vite';
+import { pathToFileURL } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const projectRoot = process.cwd();
-async function configuration(mode: string, command: 'build' | 'serve' = 'build') {
-  const result = await loadConfigFromFile(
-    { command, mode },
-    join(projectRoot, 'vite.config.ts'),
-    projectRoot,
-    'silent',
-  );
-  if (!result) throw new Error('The project Vite configuration could not be loaded.');
-  return result.config;
+async function configuration(
+  directory: string,
+  mode: string,
+  command: 'build' | 'serve' = 'build',
+  overrides: Record<string, string> = {},
+) {
+  const environment = { ...process.env };
+  for (const key of Object.keys(environment)) {
+    if (key.startsWith('VITE_FIREBASE_')) delete environment[key];
+  }
+  const vite = pathToFileURL(join(projectRoot, 'node_modules/vite/dist/node/index.js')).href;
+  const script = `
+    import { loadConfigFromFile } from ${JSON.stringify(vite)};
+    try {
+      const result = await loadConfigFromFile(
+        ${JSON.stringify({ command, mode })},
+        ${JSON.stringify(join(projectRoot, 'vite.config.ts'))},
+        ${JSON.stringify(projectRoot)}, 'silent');
+      if (!result) throw new Error('Vite configuration was not loaded.');
+      const { define, build } = result.config;
+      process.stdout.write(JSON.stringify({ define, build: { outDir: build?.outDir } }));
+    } catch (error) {
+      process.stderr.write(error instanceof Error ? error.message : 'Configuration failed.');
+      process.exitCode = 1;
+    }
+  `;
+  const result = spawnSync(process.execPath, ['--input-type=module', '-e', script], {
+    cwd: directory,
+    env: { ...environment, ...overrides },
+    encoding: 'utf8',
+    timeout: 15000,
+  });
+  if (result.error) throw result.error;
+  if (result.status !== 0) throw new Error(result.stderr);
+  return JSON.parse(result.stdout) as {
+    define?: Record<string, string>;
+    build: { outDir?: string };
+  };
 }
 const cloudEnvironment = [
   'VITE_FIREBASE_MODE=cloud',
@@ -29,7 +60,6 @@ describe('explicit cloud release build', () => {
 
   beforeEach(() => {
     directory = mkdtempSync(join(tmpdir(), 'studyflow-cloud-build-'));
-    vi.spyOn(process, 'cwd').mockReturnValue(directory);
   });
 
   afterEach(() => {
@@ -45,24 +75,25 @@ describe('explicit cloud release build', () => {
   });
 
   it('requires complete cloud configuration before producing a release', async () => {
-    await expect(configuration('cloud')).rejects.toThrow(/cloud|VITE_FIREBASE/i);
+    await expect(configuration(directory, 'cloud')).rejects.toThrow(/cloud|VITE_FIREBASE/i);
     writeFileSync(join(directory, '.env.cloud.local'), 'VITE_FIREBASE_MODE=cloud\n');
-    await expect(configuration('cloud')).rejects.toThrow('VITE_FIREBASE_PROJECT_ID');
+    await expect(configuration(directory, 'cloud')).rejects.toThrow('VITE_FIREBASE_PROJECT_ID');
   });
 
   it('loads the mode-specific file and isolates cloud output from ordinary checks', async () => {
     writeFileSync(join(directory, '.env.local'), 'VITE_FIREBASE_MODE=disabled\n');
     writeFileSync(join(directory, '.env.cloud.local'), cloudEnvironment);
-    const cloud = await configuration('cloud');
-    const ordinary = await configuration('production');
+    const cloud = await configuration(directory, 'cloud');
+    const ordinary = await configuration(directory, 'production');
     expect(cloud.build?.outDir).toBe('dist-cloud');
     expect(ordinary.build?.outDir ?? 'dist').toBe('dist');
   });
 
   it('rejects a process override that would turn a cloud release into emulator mode', async () => {
     writeFileSync(join(directory, '.env.cloud.local'), cloudEnvironment);
-    vi.stubEnv('VITE_FIREBASE_MODE', 'emulator');
-    await expect(configuration('cloud')).rejects.toThrow(/requires.*cloud/i);
+    await expect(
+      configuration(directory, 'cloud', 'build', { VITE_FIREBASE_MODE: 'emulator' }),
+    ).rejects.toThrow(/requires.*cloud/i);
   });
 
   it('rejects the local demo project as a cloud release target', async () => {
@@ -70,13 +101,13 @@ describe('explicit cloud release build', () => {
       join(directory, '.env.cloud.local'),
       cloudEnvironment.replace('PROJECT_ID=capstone-build-test', 'PROJECT_ID=demo-studyflow'),
     );
-    await expect(configuration('cloud')).rejects.toThrow(/demo-studyflow/);
+    await expect(configuration(directory, 'cloud')).rejects.toThrow(/demo-studyflow/);
   });
 
   it('preserves forced local modes even when valid cloud settings are present', async () => {
     writeFileSync(join(directory, '.env.local'), cloudEnvironment);
-    const emulator = await configuration('emulator', 'serve');
-    const layout = await configuration('layout', 'serve');
+    const emulator = await configuration(directory, 'emulator', 'serve');
+    const layout = await configuration(directory, 'layout', 'serve');
     expect(emulator.define?.['import.meta.env.VITE_FIREBASE_MODE']).toBe('"emulator"');
     expect(layout.define?.['import.meta.env.VITE_FIREBASE_MODE']).toBe('"disabled"');
   });

@@ -45,7 +45,9 @@ Rules tests start Firestore and exercise owner/schema/reference enforcement. Int
 
 ## Shared cloud setup later
 
-When an authorized Firebase project/web app exists, enable its email/password provider and configure the agreed password policy. The registration UI requires 8-128 characters; Firebase may reject additional policy violations. Put public web configuration in each ignored `.env.local`:
+Use the [explicit cloud release workflow](CLOUD_RELEASE.md). `npm run build:cloud` checks `.env.cloud.local` and writes to `dist-cloud`; `npm run preview:cloud` serves that output. Hosting uses `dist-cloud`, which ordinary builds/checks leave intact. A cloud build is not a deployment or verification of the selected project.
+
+When an authorized Firebase project/web app exists, enable its email/password provider and configure the agreed password policy. The registration UI requires 8-128 characters; Firebase may reject additional policy violations. Put public web configuration in each ignored `.env.cloud.local`:
 
 ```dotenv
 VITE_FIREBASE_MODE=cloud

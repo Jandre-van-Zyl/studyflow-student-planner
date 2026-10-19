@@ -10,7 +10,7 @@
     "singleProjectMode": true
   },
   "hosting": {
-    "public": "dist",
+    "public": "dist-cloud",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [{ "source": "**", "destination": "/index.html" }]
   }

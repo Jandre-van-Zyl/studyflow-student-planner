@@ -84,6 +84,8 @@ Read [FIREBASE.md](FIREBASE.md). `npm run dev` manages the backend and frontend 
 
 ## Troubleshooting
 
+For an approved hosted environment, use [CLOUD_RELEASE.md](CLOUD_RELEASE.md). Local `dev` commands deliberately do not select cloud mode. `build:cloud` and `preview:cloud` use explicit cloud configuration and isolated `dist-cloud` output; no cloud project is configured by the local setup steps above.
+
 | Symptom                                  | Action                                                                                                                                                                |
 | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | npm.ps1 blocked in PowerShell            | Use `npm.cmd ci`, `npm.cmd run dev`, etc.; do not change machine-wide execution policy.                                                                               |

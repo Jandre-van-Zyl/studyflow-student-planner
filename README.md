@@ -89,6 +89,8 @@ docs/proposal/          Prepared Week 1 PDF
 
 ## Commands
 
+Cloud releases have separate checked build/preview commands and isolated output. Read [the cloud release workflow](docs/development/CLOUD_RELEASE.md) before using them. Local development remains emulator-only; a cloud build does not deploy the app.
+
 | Command                             | Purpose                                                                         |
 | ----------------------------------- | ------------------------------------------------------------------------------- |
 | `npm ci`                            | Install exact versions from package-lock.json                                   |
@@ -99,6 +101,8 @@ docs/proposal/          Prepared Week 1 PDF
 | `npm test` / `npm run test:watch`   | Run/watch bootstrap and later feature tests                                     |
 | `npm run format`                    | Format maintained source/config/docs                                            |
 | `npm run build` / `npm run preview` | Build dist / preview on port 4173                                               |
+| `npm run build:cloud`               | Validate explicit cloud configuration and build isolated dist-cloud output      |
+| `npm run preview:cloud`             | Preview the existing cloud release on port 4173; does not rebuild               |
 | `npm run emulators`                 | Optional local Auth/Firestore; Java 21+ required                                |
 | `npm run test:rules`                | Firestore profile ownership/schema and retained feature guards; Java 21+        |
 | `npm run test:integration`          | Real local Auth/profile flows, isolation, revisions and offline saves; Java 21+ |
@@ -128,11 +132,11 @@ Firestore rules permit valid own-profile access and strictly validated own plann
 
 The three plans preserve the 15 October proposed baseline; README/development notes describe the actual 16 October starter. The five students are the client. Actual requirements evidence, final technical assignments, proposal approval and Firestore assessment fit still need recording.
 
-| Date, Africa/Johannesburg            | Checkpoint                                                                                                |
-| ------------------------------------ | --------------------------------------------------------------------------------------------------------- |
-| Fri 16 Oct, before morning practical | One-page proposal, once per group by Dewald via Teams to Jabulile Mashibini                               |
-| Mon 19 Oct, 12:00                    | Separate Week 2 and Week 3 PDFs together; research, SRS/design and each member's meaningful early commits |
-| Fri 23 Oct, 12:00                    | Working Must scope, database, walkthrough, dissertation draft and actual test/evaluation evidence         |
-| Thu 29 Oct                           | Final dissertation/source/evidence and live demo; exact cutoff/presentation details still to confirm      |
+| Date, Africa/Johannesburg            | Checkpoint                                                                                                                     |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| Fri 16 Oct, before morning practical | One-page proposal, once per group by Dewald via Teams to Jabulile Mashibini                                                    |
+| Mon 19 Oct, 12:00                    | Separate Week 2 and Week 3 PDFs together; research, SRS/design and each member's meaningful early commits                      |
+| Mon 26 Oct, cutoff to confirm        | Working Must scope, database, walkthrough, dissertation draft and actual test/evaluation evidence; updated by Jandre on 19 Oct |
+| Thu 29 Oct                           | Final dissertation/source/evidence and live demo; exact cutoff/presentation details still to confirm                           |
 
 Put the repo URL on page 1 from Week 2 onward and arrange accepted assessor access to the private repo. Each member needs genuine feature/test contributions; assistant-assisted setup is not five members' coding evidence.
