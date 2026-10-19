@@ -113,7 +113,7 @@ The production dependency audit is clear at this baseline; the optional Firebase
 
 ## Firebase and status
 
-Read [FIREBASE.md](docs/development/FIREBASE.md). `npm run dev` forces local emulators and `npm run dev:preview` forces disabled mode. Explicit `cloud` configuration applies to other commands/builds and requires complete public web values. No cloud project, billing account or deployment was created.
+Read [FIREBASE.md](docs/development/FIREBASE.md) and [current cloud setup status](docs/development/CLOUD_PROJECT_STATUS.md). `npm run dev` forces local emulators and `npm run dev:preview` forces disabled mode. Explicit cloud builds require complete public web values. Project `studyflow-ctu-capstone` and its web app are registered on Spark; no billing was linked or app deployed. Authentication, database setup and verified membership remain pending. Maximum permitted spend is zero.
 
 Firestore rules permit valid own-profile access and strictly validated own planner collections. Cross-user/unauthenticated access, unknown collections and hard deletes remain denied. Subject-code claims enforce uniqueness atomically. See the [contract](docs/design/Planner_Data_Contract.md). `.env.local` stays outside Git; never put passwords, service-account JSON or private keys in the frontend.
 

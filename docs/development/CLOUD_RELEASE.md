@@ -1,6 +1,6 @@
 # Cloud release workflow
 
-Prepared 19 October 2026. The local cloud-build boundary is implemented; a real Firebase project, account policy, deployed rules and live Hosting still require setup and verification. No cloud resource is created by building this app.
+Prepared 19 October 2026. The local cloud-build boundary is implemented. Project/web-app registration and a configured frontend build are now verified; account policy, database, deployed rules and live Hosting remain pending. Read [current cloud setup status](CLOUD_PROJECT_STATUS.md). No cloud resource is created by building this app.
 
 ## Separate local development from the cloud release
 
