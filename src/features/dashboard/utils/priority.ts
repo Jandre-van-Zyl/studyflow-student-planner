@@ -1,14 +1,18 @@
-export type Priority = 'High' | 'Medium' | 'Low';
+import type {
+  AssessmentPriority,
+  AssessmentStatus,
+  AssessmentType,
+} from '../../../shared/types/planner';
 
-export type AssessmentStatus = 'To Do' | 'In Progress' | 'Completed';
+export type { AssessmentPriority, AssessmentStatus, AssessmentType };
 
 export interface AssessmentItem {
   id: string;
   subjectId: string;
   title: string;
-  type: 'Assignment' | 'Test' | 'Exam' | 'Project';
+  type: AssessmentType;
   dueAt: Date;
-  priority: Priority;
+  priority: AssessmentPriority;
   status: AssessmentStatus;
   remainingMinutes: number;
   archived: boolean;
@@ -21,27 +25,38 @@ export interface RecommendedTask {
   isQuickTask: boolean;
 }
 
-// I gave each priority a number so I can sort the tasks later.
-const PRIORITY_WEIGHT: Record<Priority, number> = {
+const PRIORITY_WEIGHT: Record<AssessmentPriority, number> = {
   High: 3,
   Medium: 2,
   Low: 1,
 };
 
-// I count tasks that take 30 minutes or less as quick tasks.
 const QUICK_TASK_LIMIT_MINUTES = 30;
 const MILLISECONDS_PER_HOUR = 60 * 60 * 1000;
 
-/**
- * I use this function to help the student decide what to work on next.
- *
- * I put the tasks into groups depending on when they are due:
- * 0 = The task is already overdue
- * 1 = The task is due within 24 hours
- * 2 = The task is due within 72 hours
- * 3 = The task is due within 7 days
- * 4 = The task is due later than 7 days
- */
+function getDeadlineBucket(hoursUntilDue: number): number {
+  if (hoursUntilDue < 0) return 0;
+  if (hoursUntilDue <= 24) return 1;
+  if (hoursUntilDue <= 72) return 2;
+  if (hoursUntilDue <= 168) return 3;
+  return 4;
+}
+
+function getUrgencyExplanation(bucket: number): string {
+  switch (bucket) {
+    case 0:
+      return 'Overdue';
+    case 1:
+      return 'Due within 24 hours';
+    case 2:
+      return 'Due within 72 hours';
+    case 3:
+      return 'Due within 7 days';
+    default:
+      return 'Due later';
+  }
+}
+
 export function getRecommendedTasks(
   items: AssessmentItem[],
   now: Date = new Date(),
@@ -49,48 +64,24 @@ export function getRecommendedTasks(
   return items
     .filter((item) => item.status !== 'Completed' && !item.archived)
     .map((assessment): RecommendedTask => {
-      // I calculate how many hours are left before the task is due.
       const hoursUntilDue = (assessment.dueAt.getTime() - now.getTime()) / MILLISECONDS_PER_HOUR;
-
-      let bucket: number;
-      let explanation: string;
-
-      // I check when the task is due and put it in the right group.
-      if (hoursUntilDue < 0) {
-        bucket = 0;
-        explanation = 'Overdue — complete this task as soon as possible.';
-      } else if (hoursUntilDue <= 24) {
-        bucket = 1;
-        explanation = 'Due within 24 hours.';
-      } else if (hoursUntilDue <= 72) {
-        bucket = 2;
-        explanation = 'Due within 72 hours.';
-      } else if (hoursUntilDue <= 168) {
-        bucket = 3;
-        explanation = 'Due within 7 days.';
-      } else {
-        bucket = 4;
-        explanation = 'Due later — plan ahead.';
-      }
+      const bucket = getDeadlineBucket(hoursUntilDue);
+      const urgency = getUrgencyExplanation(bucket);
 
       return {
         assessment,
         bucket,
-        explanation,
-
-        // I mark the task as quick if it takes between 1 and 30 minutes.
+        explanation: `${urgency} - ${assessment.priority.toLowerCase()} priority`,
         isQuickTask:
           assessment.remainingMinutes > 0 &&
           assessment.remainingMinutes <= QUICK_TASK_LIMIT_MINUTES,
       };
     })
     .sort((a, b) => {
-      // I show the tasks with the closest deadlines first.
       if (a.bucket !== b.bucket) {
         return a.bucket - b.bucket;
       }
 
-      // If two tasks are in the same group, I show High priority first.
       const priorityDifference =
         PRIORITY_WEIGHT[b.assessment.priority] - PRIORITY_WEIGHT[a.assessment.priority];
 
@@ -98,7 +89,18 @@ export function getRecommendedTasks(
         return priorityDifference;
       }
 
-      // If they have the same priority, I show the task due first.
-      return a.assessment.dueAt.getTime() - b.assessment.dueAt.getTime();
+      const deadlineDifference = a.assessment.dueAt.getTime() - b.assessment.dueAt.getTime();
+
+      if (deadlineDifference !== 0) {
+        return deadlineDifference;
+      }
+
+      const effortDifference = a.assessment.remainingMinutes - b.assessment.remainingMinutes;
+
+      if (effortDifference !== 0) {
+        return effortDifference;
+      }
+
+      return a.assessment.id.localeCompare(b.assessment.id);
     });
 }

@@ -2,142 +2,210 @@ import { describe, it, expect } from 'vitest';
 import { getRecommendedTasks, type AssessmentItem } from './priority';
 
 describe('FR-11 Next-Task Recommendation Engine', () => {
-  // I use this time for all my tests so the results stay the same each time.
   const now = new Date('2026-10-15T10:00:00+02:00');
 
+  const makeAssessment = (
+    overrides: Partial<AssessmentItem> & Pick<AssessmentItem, 'id'>,
+  ): AssessmentItem => ({
+    subjectId: 'sub1',
+    title: `Task ${overrides.id}`,
+    type: 'Assignment',
+    dueAt: new Date(now.getTime() + 12 * 60 * 60 * 1000),
+    priority: 'Medium',
+    status: 'To Do',
+    remainingMinutes: 60,
+    archived: false,
+    ...overrides,
+  });
+
   it('TC-23: excludes completed/archived items and leads with overdue tasks', () => {
-    const items: AssessmentItem[] = [
-      {
-        id: '1',
-        subjectId: 'sub1',
-        title: 'Completed Essay',
-        type: 'Assignment',
-        dueAt: new Date('2026-10-14T10:00:00+02:00'),
-        priority: 'High',
+    const items = [
+      makeAssessment({
+        id: 'completed',
         status: 'Completed',
-        remainingMinutes: 0,
-        archived: false,
-      },
-      {
-        id: '2',
-        subjectId: 'sub1',
-        title: 'Overdue Quiz',
-        type: 'Test',
-        dueAt: new Date('2026-10-15T09:59:59+02:00'),
-        priority: 'Low',
-        status: 'To Do',
-        remainingMinutes: 45,
-        archived: false,
-      },
-      {
-        id: '3',
-        subjectId: 'sub1',
-        title: 'Archived Lab',
-        type: 'Project',
-        dueAt: new Date('2026-10-14T10:00:00+02:00'),
         priority: 'High',
-        status: 'To Do',
-        remainingMinutes: 60,
+        dueAt: new Date(now.getTime() - 60_000),
+      }),
+      makeAssessment({
+        id: 'overdue',
+        priority: 'Low',
+        dueAt: new Date(now.getTime() - 1),
+      }),
+      makeAssessment({
+        id: 'archived',
         archived: true,
-      },
+        dueAt: new Date(now.getTime() - 60_000),
+      }),
     ];
 
-    // I send the test tasks to my recommendation function.
     const results = getRecommendedTasks(items, now);
 
-    // I check that completed and archived tasks are left out.
-    // Only the overdue quiz should be returned.
     expect(results).toHaveLength(1);
-    expect(results[0]?.assessment.id).toBe('2');
+    expect(results[0]?.assessment.id).toBe('overdue');
     expect(results[0]?.bucket).toBe(0);
     expect(results[0]?.explanation).toContain('Overdue');
+    expect(results[0]?.explanation).toContain('low priority');
   });
 
   it('TC-24: assigns the correct buckets at 24h, 72h, and 168h', () => {
-    const items: AssessmentItem[] = [
-      {
+    const items = [
+      makeAssessment({
         id: 'exact-24h',
-        subjectId: 'sub1',
-        title: 'Task A',
-        type: 'Assignment',
-        dueAt: new Date('2026-10-16T10:00:00+02:00'),
-        priority: 'Medium',
-        status: 'To Do',
-        remainingMinutes: 60,
-        archived: false,
-      },
-      {
+        dueAt: new Date(now.getTime() + 24 * 60 * 60 * 1000),
+      }),
+      makeAssessment({
         id: 'exact-72h',
-        subjectId: 'sub1',
-        title: 'Task B',
-        type: 'Assignment',
-        dueAt: new Date('2026-10-18T10:00:00+02:00'),
-        priority: 'Medium',
-        status: 'To Do',
-        remainingMinutes: 60,
-        archived: false,
-      },
-      {
+        dueAt: new Date(now.getTime() + 72 * 60 * 60 * 1000),
+      }),
+      makeAssessment({
         id: 'exact-168h',
-        subjectId: 'sub1',
-        title: 'Task C',
-        type: 'Assignment',
-        dueAt: new Date('2026-10-22T10:00:00+02:00'),
-        priority: 'Medium',
-        status: 'To Do',
-        remainingMinutes: 60,
-        archived: false,
-      },
+        dueAt: new Date(now.getTime() + 168 * 60 * 60 * 1000),
+      }),
     ];
 
-    // I check that each deadline goes into the correct group.
     const results = getRecommendedTasks(items, now);
 
-    const task24h = results.find((task) => task.assessment.id === 'exact-24h');
-    const task72h = results.find((task) => task.assessment.id === 'exact-72h');
-    const task168h = results.find((task) => task.assessment.id === 'exact-168h');
-
-    // These checks make sure the deadline groups are correct.
-    expect(task24h?.bucket).toBe(1);
-    expect(task72h?.bucket).toBe(2);
-    expect(task168h?.bucket).toBe(3);
+    expect(results.find((task) => task.assessment.id === 'exact-24h')?.bucket).toBe(1);
+    expect(results.find((task) => task.assessment.id === 'exact-72h')?.bucket).toBe(2);
+    expect(results.find((task) => task.assessment.id === 'exact-168h')?.bucket).toBe(3);
   });
 
-  it('TC-25: sorts High > Medium > Low priority within the same bucket', () => {
-    const items: AssessmentItem[] = [
-      {
-        id: 'low-prio-quick',
-        subjectId: 'sub1',
-        title: 'Low Priority Quick Task',
-        type: 'Assignment',
-        dueAt: new Date('2026-10-16T08:00:00+02:00'),
+  it('TC-25: sorts High > Medium > Low priority before considering effort', () => {
+    const items = [
+      makeAssessment({
+        id: 'low-quick',
         priority: 'Low',
-        status: 'To Do',
         remainingMinutes: 15,
-        archived: false,
-      },
-      {
-        id: 'high-prio-long',
-        subjectId: 'sub1',
-        title: 'High Priority Long Task',
-        type: 'Exam',
-        dueAt: new Date('2026-10-16T09:00:00+02:00'),
+      }),
+      makeAssessment({
+        id: 'medium',
+        priority: 'Medium',
+        remainingMinutes: 30,
+      }),
+      makeAssessment({
+        id: 'high-long',
         priority: 'High',
-        status: 'To Do',
         remainingMinutes: 120,
-        archived: false,
-      },
+      }),
     ];
 
-    // I check that priority comes before the time needed for a task.
     const results = getRecommendedTasks(items, now);
 
-    // The High priority task should appear first, even though it takes longer.
-    expect(results[0]?.assessment.id).toBe('high-prio-long');
+    expect(results.map((task) => task.assessment.id)).toEqual(['high-long', 'medium', 'low-quick']);
+    expect(results[2]?.isQuickTask).toBe(true);
     expect(results[0]?.isQuickTask).toBe(false);
+  });
 
-    // The Low priority task takes only 15 minutes, so it counts as a quick task.
-    expect(results[1]?.assessment.id).toBe('low-prio-quick');
-    expect(results[1]?.isQuickTask).toBe(true);
+  it('TC-26: sorts by shorter effort, then assessment ID for equal deadlines and priorities', () => {
+    const dueAt = new Date(now.getTime() + 12 * 60 * 60 * 1000);
+    const items = [
+      makeAssessment({ id: 'z', dueAt, remainingMinutes: 15 }),
+      makeAssessment({ id: 'a', dueAt, remainingMinutes: 15 }),
+      makeAssessment({ id: 'long', dueAt, remainingMinutes: 120 }),
+    ];
+
+    const expected = ['a', 'z', 'long'];
+
+    expect(getRecommendedTasks(items, now).map((task) => task.assessment.id)).toEqual(expected);
+
+    expect(
+      getRecommendedTasks([...items].reverse(), now).map((task) => task.assessment.id),
+    ).toEqual(expected);
+  });
+
+  it('TC-27: earlier exact deadline wins before effort when bucket and priority match', () => {
+    const results = getRecommendedTasks(
+      [
+        makeAssessment({
+          id: 'later-short',
+          dueAt: new Date(now.getTime() + 20 * 60 * 60 * 1000),
+          remainingMinutes: 15,
+        }),
+        makeAssessment({
+          id: 'earlier-long',
+          dueAt: new Date(now.getTime() + 10 * 60 * 60 * 1000),
+          remainingMinutes: 120,
+        }),
+      ],
+      now,
+    );
+
+    expect(results.map((task) => task.assessment.id)).toEqual(['earlier-long', 'later-short']);
+  });
+
+  it('TC-28: includes urgency and priority in the explanation', () => {
+    const [task] = getRecommendedTasks([makeAssessment({ id: 'urgent', priority: 'High' })], now);
+
+    expect(task?.explanation).toBe('Due within 24 hours - high priority');
+  });
+
+  it('returns an empty list when no eligible tasks remain', () => {
+    expect(
+      getRecommendedTasks(
+        [
+          makeAssessment({ id: 'completed', status: 'Completed' }),
+          makeAssessment({ id: 'archived', archived: true }),
+        ],
+        now,
+      ),
+    ).toEqual([]);
+  });
+
+  it('places tasks exactly on each deadline boundary in the expected bucket', () => {
+    const boundaries = [
+      { hours: 0, bucket: 1 },
+      { hours: 24, bucket: 1 },
+      { hours: 72, bucket: 2 },
+      { hours: 168, bucket: 3 },
+    ];
+
+    for (const { hours, bucket } of boundaries) {
+      const task = makeAssessment({
+        id: `boundary-${hours}`,
+        dueAt: new Date(now.getTime() + hours * 60 * 60 * 1000),
+      });
+
+      expect(getRecommendedTasks([task], now)[0]?.bucket).toBe(bucket);
+    }
+  });
+
+  it('places tasks immediately before and after every deadline boundary correctly', () => {
+    const boundaries = [
+      { hours: 0, beforeBucket: 0, afterBucket: 1 },
+      { hours: 24, beforeBucket: 1, afterBucket: 2 },
+      { hours: 72, beforeBucket: 2, afterBucket: 3 },
+      { hours: 168, beforeBucket: 3, afterBucket: 4 },
+    ];
+
+    for (const { hours, beforeBucket, afterBucket } of boundaries) {
+      const boundaryTime = now.getTime() + hours * 60 * 60 * 1000;
+
+      const before = makeAssessment({
+        id: `before-${hours}`,
+        dueAt: new Date(boundaryTime - 1),
+      });
+
+      const after = makeAssessment({
+        id: `after-${hours}`,
+        dueAt: new Date(boundaryTime + 1),
+      });
+
+      expect(getRecommendedTasks([before], now)[0]?.bucket).toBe(beforeBucket);
+      expect(getRecommendedTasks([after], now)[0]?.bucket).toBe(afterBucket);
+    }
+  });
+
+  it('marks 30-minute tasks as quick but not 31-minute tasks', () => {
+    const results = getRecommendedTasks(
+      [
+        makeAssessment({ id: '30-minutes', remainingMinutes: 30 }),
+        makeAssessment({ id: '31-minutes', remainingMinutes: 31 }),
+      ],
+      now,
+    );
+
+    expect(results.find((task) => task.assessment.id === '30-minutes')?.isQuickTask).toBe(true);
+
+    expect(results.find((task) => task.assessment.id === '31-minutes')?.isQuickTask).toBe(false);
   });
 });
