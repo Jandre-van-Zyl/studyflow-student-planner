@@ -1,6 +1,6 @@
 # Cloud release workflow
 
-Prepared 19 October 2026. The local cloud-build boundary is implemented. Project/web-app registration and a configured frontend build are now verified; account policy, database, deployed rules and live Hosting remain pending. Read [current cloud setup status](CLOUD_PROJECT_STATUS.md). No cloud resource is created by building this app.
+Updated 19 October 2026. The isolated cloud build, registered project/web app, account policy, Johannesburg database, published rules and real single-account cloud save/reload are verified. Live two-account isolation and Hosting publication remain pending. Read [current cloud setup status](CLOUD_PROJECT_STATUS.md). No cloud resource is created by building this app.
 
 ## Separate local development from the cloud release
 
@@ -49,7 +49,7 @@ The code uses strict Firebase chunk execution ordering. Keep that setting when c
 
 ## Membership status
 
-Verified email plus the team-approved list is implemented and tested locally in the app and rules. Follow [student access setup](STUDENT_ACCESS.md). Cloud enforcement remains pending provider/database setup and deployment of the reviewed app/rules together. Actual addresses belong in private administration, not committed fixtures/screenshots. Team approval is not independent proof of CTU enrolment.
+Verified email plus the team-approved list is implemented and tested locally in the app and rules. The reviewed rules are now published and real verified admission works in the local cloud preview. A public frontend release remains separate. Follow [student access setup](STUDENT_ACCESS.md). Actual addresses belong in private administration, not committed fixtures/screenshots. Team approval is not independent proof of CTU enrolment.
 
 ## References
 

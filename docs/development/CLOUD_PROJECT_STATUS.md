@@ -16,7 +16,13 @@ The default Firestore Standard database was created in `africa-south1` (Johannes
 
 Only Jandre's explicitly approved address was entered privately with exactly Boolean `active: true`; the actual address stays out of source and shared evidence. Zero manual/composite indexes and zero field exemptions were observed, matching the repository's empty index configuration. No index modification was needed.
 
-These checks establish configuration and persisted rules, not successful real mailbox verification, authenticated cloud saves, multi-account isolation or a public website. The agent created no cloud Auth account. A human password/mailbox handoff is pending. The local Firebase CLI has no authorized account; rules were published through the console without creating CLI OAuth credentials.
+Jandre created his own account, received the verification email and completed verification himself. Refreshing access admitted the account, initialized its private profile and opened the saved dashboard. Admission persisted after a full reload. No password, verification link or authentication token was collected.
+
+With separate approval, one labelled synthetic subject (`CLOUD-SE2`), weekly class, assignment and linked thirty-minute study block were saved against this backend. The full planner survived reload, showing the class, deadline, block and 30/60-minute Monday allocation. The subject/class/assignment are now archived, the block cancelled and all seven budgets restored to zero. No record was permanently deleted. See the [cloud workflow and save-confirmation report](../testing/Cloud_Workflow_Verification_2026-10-19.md).
+
+The test exposed a stale save-confirmation result while a profile listener remained active. Local fix `e203a8d` uses a separate read-only transaction to confirm committed profile/planner revisions. The rebuilt cloud preview passed budget changes in both directions without a false conflict warning. This is verified cloud-backend behaviour through a locally served bundle; multi-account cloud isolation and a public website remain unverified.
+
+The local Firebase CLI has no authorized account; rules were published through the console without creating CLI OAuth credentials.
 
 ## Zero-spend boundary
 
@@ -26,8 +32,8 @@ Official sources checked 19 October 2026: [Firebase pricing](https://firebase.go
 
 ## Pending setup
 
-1. Jandre enters his own app-only password and verifies his approved address using his mailbox. Confirm actual signup, delivery, recheck and workspace admission; never collect his password or verification link in chat.
-2. Verify real cloud profile/planner save/reload and direct unauthorized/foreign-account denial using authorized synthetic records/accounts. Existing local tests and published text are not substitutes for these live outcomes.
+1. Obtain an authorized second account if live cross-account isolation testing is required. Existing local owner-isolation tests and the published rules are useful evidence, but are not a completed two-user cloud test. Never collect another user's password or verification link in chat.
+2. Verify direct unauthorized/foreign-account denial using genuinely authorized accounts. Real single-account cloud save/reload is complete; signed-out UI route checks do not by themselves prove database isolation.
 3. Maintain only genuinely confirmed additional membership entries after applicable approval. See [student access setup](STUDENT_ACCESS.md). No domain wildcard, auto-approval or new administrator grant is implied.
 4. Retain the tested source/rule revision and real cloud results, inspect quotas, and recheck the final candidate before publication. Keep all unused paid services disabled.
 5. Obtain the applicable Hosting release approval, publish the verified cloud bundle, and test its HTTPS URL from another device while local services are stopped.
