@@ -1,4 +1,3 @@
-
 export type Priority = 'High' | 'Medium' | 'Low';
 
 export type AssessmentStatus = 'To Do' | 'In Progress' | 'Completed';
@@ -45,19 +44,13 @@ const MILLISECONDS_PER_HOUR = 60 * 60 * 1000;
  */
 export function getRecommendedTasks(
   items: AssessmentItem[],
-  now: Date = new Date()
+  now: Date = new Date(),
 ): RecommendedTask[] {
   return items
-    .filter(
-      (item) =>
-        item.status !== 'Completed' &&
-        !item.archived
-    )
+    .filter((item) => item.status !== 'Completed' && !item.archived)
     .map((assessment): RecommendedTask => {
       // I calculate how many hours are left before the task is due.
-      const hoursUntilDue =
-        (assessment.dueAt.getTime() - now.getTime()) /
-        MILLISECONDS_PER_HOUR;
+      const hoursUntilDue = (assessment.dueAt.getTime() - now.getTime()) / MILLISECONDS_PER_HOUR;
 
       let bucket: number;
       let explanation: string;
@@ -99,17 +92,13 @@ export function getRecommendedTasks(
 
       // If two tasks are in the same group, I show High priority first.
       const priorityDifference =
-        PRIORITY_WEIGHT[b.assessment.priority] -
-        PRIORITY_WEIGHT[a.assessment.priority];
+        PRIORITY_WEIGHT[b.assessment.priority] - PRIORITY_WEIGHT[a.assessment.priority];
 
       if (priorityDifference !== 0) {
         return priorityDifference;
       }
 
       // If they have the same priority, I show the task due first.
-      return (
-        a.assessment.dueAt.getTime() -
-        b.assessment.dueAt.getTime()
-      );
+      return a.assessment.dueAt.getTime() - b.assessment.dueAt.getTime();
     });
 }

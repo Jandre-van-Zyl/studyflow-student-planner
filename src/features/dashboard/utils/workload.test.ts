@@ -1,10 +1,5 @@
-
 import { describe, it, expect } from 'vitest';
-import {
-  calculateDailyAllocation,
-  getWorkloadSummary,
-  type StudyBlockItem,
-} from './workload';
+import { calculateDailyAllocation, getWorkloadSummary, type StudyBlockItem } from './workload';
 
 describe('FR-12 Daily Workload Calculations', () => {
   // I use the same date for my tests so the results are consistent.

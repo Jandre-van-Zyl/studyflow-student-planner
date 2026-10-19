@@ -1,4 +1,3 @@
-
 export interface StudyBlockItem {
   id: string;
   startAt: Date;
@@ -34,10 +33,7 @@ function getDateKey(date: Date): string {
  * I use this function to work out how many minutes
  * the student has planned for a specific day.
  */
-export function calculateDailyAllocation(
-  blocks: StudyBlockItem[],
-  targetDate: Date
-): number {
+export function calculateDailyAllocation(blocks: StudyBlockItem[], targetDate: Date): number {
   // I get the date first so I can compare it with each study block.
   const targetDateKey = getDateKey(targetDate);
 
@@ -53,9 +49,7 @@ export function calculateDailyAllocation(
     })
     .reduce((total, block) => {
       // I calculate how long each study block lasts in minutes.
-      const durationMinutes =
-        (block.endAt.getTime() - block.startAt.getTime()) /
-        (1000 * 60);
+      const durationMinutes = (block.endAt.getTime() - block.startAt.getTime()) / (1000 * 60);
 
       // I make sure a negative duration doesn't lower the total.
       return total + Math.max(0, durationMinutes);
@@ -68,17 +62,14 @@ export function calculateDailyAllocation(
  */
 export function getWorkloadSummary(
   allocatedMinutes: number,
-  budgetMinutes: number
+  budgetMinutes: number,
 ): WorkloadSummary {
   // I make sure the minutes and budget can't be negative.
   const safeAllocated = Math.max(0, allocatedMinutes);
   const safeBudget = Math.max(0, budgetMinutes);
 
   // I check how many minutes go over the daily budget.
-  const excessMinutes = Math.max(
-    0,
-    safeAllocated - safeBudget
-  );
+  const excessMinutes = Math.max(0, safeAllocated - safeBudget);
 
   // If the student goes over their budget, I mark them as overloaded.
   const isOverloaded = excessMinutes > 0;
@@ -88,9 +79,7 @@ export function getWorkloadSummary(
 
   if (safeBudget > 0) {
     // I calculate what percentage of the daily budget is being used.
-    percentageUsed = Math.round(
-      (safeAllocated / safeBudget) * 100
-    );
+    percentageUsed = Math.round((safeAllocated / safeBudget) * 100);
   } else if (safeAllocated > 0) {
     // If there is no budget but study time is planned, I use 100%.
     percentageUsed = 100;

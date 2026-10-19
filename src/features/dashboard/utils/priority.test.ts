@@ -1,4 +1,3 @@
-
 import { describe, it, expect } from 'vitest';
 import { getRecommendedTasks, type AssessmentItem } from './priority';
 
@@ -94,15 +93,9 @@ describe('FR-11 Next-Task Recommendation Engine', () => {
     // I check that each deadline goes into the correct group.
     const results = getRecommendedTasks(items, now);
 
-    const task24h = results.find(
-      (task) => task.assessment.id === 'exact-24h'
-    );
-    const task72h = results.find(
-      (task) => task.assessment.id === 'exact-72h'
-    );
-    const task168h = results.find(
-      (task) => task.assessment.id === 'exact-168h'
-    );
+    const task24h = results.find((task) => task.assessment.id === 'exact-24h');
+    const task72h = results.find((task) => task.assessment.id === 'exact-72h');
+    const task168h = results.find((task) => task.assessment.id === 'exact-168h');
 
     // These checks make sure the deadline groups are correct.
     expect(task24h?.bucket).toBe(1);
