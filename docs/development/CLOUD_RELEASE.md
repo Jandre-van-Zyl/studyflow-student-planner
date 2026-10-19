@@ -1,5 +1,7 @@
 # Cloud release workflow
 
+**Publication is deferred by Jandre's explicit 19 October keep-local decision.** Retain this workflow for a future requested release. Do not initialize Hosting, request deployment OAuth or ask for publication approval again unless he changes the decision.
+
 Updated 19 October 2026. The isolated cloud build, registered project/web app, account policy, Johannesburg database, published rules and real single-account cloud save/reload are verified. Live two-account isolation and Hosting publication remain pending. Read [current cloud setup status](CLOUD_PROJECT_STATUS.md). No cloud resource is created by building this app.
 
 ## Separate local development from the cloud release

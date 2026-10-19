@@ -1,5 +1,7 @@
 # Cloud setup status - 19 October 2026
 
+**Current deployment decision:** Jandre selected “Keep the website local” on 19 October after reviewing the tested Hosting candidate. Do not initialize/publish Hosting or request deployment CLI consent unless he changes that decision. Existing approved cloud Auth/Firestore remains available to explicitly selected local cloud previews. Ordinary development still uses emulators.
+
 ## Verified
 
 - Project: `studyflow-ctu-capstone`, display name StudyFlow CTU Capstone, in Jandre's signed-in Google account. Its overview shows Spark, No-cost ($0/month).
