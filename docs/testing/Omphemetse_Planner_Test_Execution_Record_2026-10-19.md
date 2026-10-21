@@ -1,11 +1,11 @@
 # Omphemetse — Planner Test Execution Record
 
-**Record date:** 19 October 2026  
-**Tester:** Omphemetse Dikeledi  
-**Branch:** `omphemetse`  
-**Tested revision (Git SHA):** `044eefc7840bcfe61dd474f6bee1f92092f2591e`  
-**Environment:** Local StudyFlow application using the project’s local development setup; Windows PowerShell; Node.js `v24.22.0`; npm `11.19.1`; Java `21.0.7`.  
-**Data:** Disposable local test account and synthetic study-block records.  
+**Record date:** 19 October 2026
+**Tester:** Omphemetse Dikeledi
+**Branch:** `omphemetse`
+**Tested revision (Git SHA):** `044eefc7840bcfe61dd474f6bee1f92092f2591e`
+**Environment:** Local StudyFlow application using the project’s local development setup; Windows PowerShell; Node.js `v24.22.0`; npm `11.19.1`; Java `21.0.7`.
+**Data:** Disposable local test account and synthetic study-block records.
 **Scope note:** This record contains only the manual planner checks reported as personally performed by the tester. It does not claim that all 35 planned acceptance cases have passed.
 
 ## Manual test results
@@ -35,3 +35,40 @@
 ## Evidence handling
 
 No screenshots or console logs are attached to this record. Add an evidence path only when an actual screenshot or log has been captured and saved in the repository. Keep test data synthetic and never include credentials or the contents of `.env.local`.
+
+## Additional Manual Test Results — 20 October 2026
+
+### OMP-PL-04 — Touching Study-Block Endpoints
+
+**Test objective:** Verify that consecutive study blocks can be scheduled without an overlap warning when the first block ends exactly when the second begins.
+
+**Test steps:**
+1. Created and saved `Boundary Test A` for 20 October 2026, from 09:00 to 10:00.
+2. Created and saved `Boundary Test B` for 20 October 2026, from 10:00 to 11:00.
+
+**Expected result:** The second block should save without an overlap warning because the first block ends exactly when the second begins.
+
+**Actual result:** The second block saved without an overlap warning.
+
+**Status:** PASS — for touching study-block endpoints only.
+
+### OMP-PL-05 — Excluding Cancelled Study Blocks from Overlap Detection
+
+**Test objective:** Verify that a cancelled study block does not trigger an overlap warning when a new block is scheduled during its former time.
+
+**Test steps:**
+1. Cancelled `Boundary Test B`, scheduled from 10:00 to 11:00.
+2. Confirmed that the cancelled block disappeared from the active Planner.
+3. Created and saved `Cancelled Overlap Test` for 20 October 2026, from 10:15 to 10:45.
+
+**Expected result:** The cancelled block should not trigger an overlap warning.
+
+**Actual result:** The new block saved without an overlap warning about the cancelled block.
+
+**Status:** PASS — for excluding cancelled study blocks from overlap detection.
+
+### Coverage Limitations
+
+These results confirm only the specific scenarios described above. The separate scenario in which a class ends at 10:00 and a study block starts at 10:00 has not been tested. Therefore, these results do not establish that the entire TC-22 test case has passed.
+
+No screenshots or other supporting evidence were captured for these additional manual tests.
