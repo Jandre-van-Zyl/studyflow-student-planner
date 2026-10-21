@@ -149,6 +149,19 @@ describe('study-block boundaries and clashes', () => {
 
 describe('explained assessment ordering', () => {
   const now = Date.parse('2026-10-19T12:00:00+02:00');
+  it('keeps original SAST display values and revisions while ranking equivalent instants', () => {
+    const data = exampleView();
+    const source = data.assessments[0]!;
+    data.assessments = [
+      { ...source, id: 'z', dueAt: '2026-10-20T10:00:00Z', remainingMinutes: 15 },
+      { ...source, id: 'a', dueAt: '2026-10-20T12:00:00+02:00', remainingMinutes: 15 },
+    ];
+    const result = rankedAssessments(data, now);
+    expect(result.map((row) => row.item.id)).toEqual(['a', 'z']);
+    expect(result[0]!.item).toBe(data.assessments[1]);
+    expect(result[0]!.item.dueAt).toBe('2026-10-20T12:00:00+02:00');
+    expect(data.assessments.map((item) => item.id)).toEqual(['z', 'a']);
+  });
   it('sorts urgency before manual priority and omits completed/archived records', () => {
     const data = exampleView();
     data.assessments[0]!.dueAt = '2026-10-23T12:00:00+02:00';
