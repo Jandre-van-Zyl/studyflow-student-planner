@@ -1,5 +1,7 @@
 # Local CTU preview prototype
 
+**Later local implementation, 21 October:** [CTU_SAVED_IMPORT.md](CTU_SAVED_IMPORT.md) describes the new owner-scoped persistence stage and confirmation-free connection flow. Cloud saving remains disabled pending deployment approval. The original read-only prototype record below is historical; the identity checkbox has now been removed at Jandre's request.
+
 21 October 2026. Optional investigation on `prototype/ctu-sync-20261021`, based on Main `946018d`. This is a read-only connection preview, not a released sync/import feature. Main and all team branches are unaffected.
 
 ## Run and connect

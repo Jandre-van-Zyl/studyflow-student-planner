@@ -1,9 +1,14 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AuthContext } from '@/features/auth/authContext';
 import { authFixture, profileFixture } from '@/test/accountFixtures';
 import { CtuSyncPage } from './CtuSyncPage';
 import { APP_ORIGIN, CTU_CHANNEL, combinePortalPages } from './portalContract';
+
+vi.mock('./CtuSavedPanel', () => ({ CtuSavedPanel: () => null }));
+vi.mock('./ctuImportService', () => ({ saveCtuImport: vi.fn() }));
+import { saveCtuImport } from './ctuImportService';
+afterEach(() => vi.unstubAllEnvs());
 
 const value = authFixture({
   status: 'ready',
@@ -27,7 +32,7 @@ describe('CTU private preview', () => {
     const view = show();
     const probe = post.mock.calls[0]![0] as { requestId: string };
     deliver({ channel: CTU_CHANNEL, type: 'ready', requestId: probe.requestId, version: 1 });
-    fireEvent.click(screen.getByRole('button', { name: 'Connect and preview' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Connect CTU' }));
     const request = post.mock.calls.at(-1)![0] as { requestId: string };
     const snapshot = combinePortalPages([
       {
@@ -62,7 +67,7 @@ describe('CTU private preview', () => {
     show();
     const probe = post.mock.calls[0]![0] as { requestId: string };
     deliver({ channel: CTU_CHANNEL, type: 'ready', requestId: probe.requestId, version: 1 });
-    fireEvent.click(screen.getByRole('button', { name: 'Connect and preview' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Connect CTU' }));
     const request = post.mock.calls.at(-1)![0] as { requestId: string };
     fireEvent.click(screen.getByRole('button', { name: 'Cancel collection' }));
     expect(post).toHaveBeenLastCalledWith(
@@ -83,7 +88,7 @@ describe('CTU private preview', () => {
         <CtuSyncPage />
       </AuthContext.Provider>,
     );
-    expect(screen.queryByRole('button', { name: 'Connect and preview' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Connect CTU' })).not.toBeInTheDocument();
   });
   it('ignores wrong origins and nonces, then previews only the current request', () => {
     const post = vi.spyOn(window, 'postMessage');
@@ -93,9 +98,9 @@ describe('CTU private preview', () => {
       { channel: CTU_CHANNEL, type: 'ready', requestId: probe.requestId, version: 1 },
       'https://evil.test',
     );
-    expect(screen.getByRole('button', { name: 'Connect and preview' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Connect CTU' })).toBeDisabled();
     deliver({ channel: CTU_CHANNEL, type: 'ready', requestId: probe.requestId, version: 1 });
-    fireEvent.click(screen.getByRole('button', { name: 'Connect and preview' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Connect CTU' }));
     const request = post.mock.calls.at(-1)![0] as { requestId: string };
     const snapshot = combinePortalPages([
       {
@@ -130,7 +135,7 @@ describe('CTU private preview', () => {
     show();
     const probe = post.mock.calls[0]![0] as { requestId: string };
     deliver({ channel: CTU_CHANNEL, type: 'ready', requestId: probe.requestId, version: 1 });
-    fireEvent.click(screen.getByRole('button', { name: 'Connect and preview' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Connect CTU' }));
     const request = post.mock.calls.at(-1)![0] as { requestId: string };
     deliver({
       channel: CTU_CHANNEL,
@@ -139,5 +144,82 @@ describe('CTU private preview', () => {
       snapshot: { version: 99 },
     });
     expect(screen.getByRole('alert')).toHaveTextContent(/invalid|unsupported|unexpected/i);
+  });
+});
+
+describe('automatic account-scoped saving', () => {
+  it('saves a valid response without an identity checkbox or a second confirmation', async () => {
+    vi.stubEnv('VITE_CTU_SAVE_ENABLED', 'true');
+    vi.mocked(saveCtuImport).mockResolvedValue({ added: 2, updated: 0, unchanged: 0 });
+    const post = vi.spyOn(window, 'postMessage');
+    show();
+    const probe = post.mock.calls[0]![0] as { requestId: string };
+    deliver({ channel: CTU_CHANNEL, type: 'ready', requestId: probe.requestId, version: 1 });
+    fireEvent.click(screen.getByRole('button', { name: 'Connect CTU' }));
+    const request = post.mock.calls.at(-1)![0] as { requestId: string };
+    const snapshot = combinePortalPages([]);
+    await act(async () =>
+      deliver({ channel: CTU_CHANNEL, type: 'result', requestId: request.requestId, snapshot }),
+    );
+    expect(saveCtuImport).toHaveBeenCalledWith('student-a', snapshot, expect.any(AbortSignal));
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    expect(screen.getByText(/Saved to your StudyFlow account: 2 new/)).toBeInTheDocument();
+  });
+  it('aborts the initiating account save and ignores its completion after account switch', async () => {
+    vi.stubEnv('VITE_CTU_SAVE_ENABLED', 'true');
+    let finish!: (v: { added: number; updated: number; unchanged: number }) => void;
+    vi.mocked(saveCtuImport).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const post = vi.spyOn(window, 'postMessage');
+    const view = show();
+    const probe = post.mock.calls[0]![0] as { requestId: string };
+    deliver({ channel: CTU_CHANNEL, type: 'ready', requestId: probe.requestId, version: 1 });
+    fireEvent.click(screen.getByRole('button', { name: 'Connect CTU' }));
+    const request = post.mock.calls.at(-1)![0] as { requestId: string };
+    deliver({
+      channel: CTU_CHANNEL,
+      type: 'result',
+      requestId: request.requestId,
+      snapshot: combinePortalPages([]),
+    });
+    const signal = vi.mocked(saveCtuImport).mock.calls.at(-1)![2]!;
+    view.rerender(
+      <AuthContext.Provider
+        value={{
+          ...value,
+          user: { uid: 'student-b', email: 'other@example.test', emailVerified: true },
+        }}
+      >
+        <CtuSyncPage />
+      </AuthContext.Provider>,
+    );
+    expect(signal.aborted).toBe(true);
+    await act(async () => finish({ added: 2, updated: 0, unchanged: 0 }));
+    expect(screen.queryByText(/Saved to your StudyFlow account:/)).not.toBeInTheDocument();
+  });
+  it('retains collected information and offers a retry when saving fails', async () => {
+    vi.stubEnv('VITE_CTU_SAVE_ENABLED', 'true');
+    vi.mocked(saveCtuImport).mockRejectedValue(new Error('unavailable'));
+    const post = vi.spyOn(window, 'postMessage');
+    show();
+    const probe = post.mock.calls[0]![0] as { requestId: string };
+    deliver({ channel: CTU_CHANNEL, type: 'ready', requestId: probe.requestId, version: 1 });
+    fireEvent.click(screen.getByRole('button', { name: 'Connect CTU' }));
+    const request = post.mock.calls.at(-1)![0] as { requestId: string };
+    await act(async () =>
+      deliver({
+        channel: CTU_CHANNEL,
+        type: 'result',
+        requestId: request.requestId,
+        snapshot: combinePortalPages([]),
+      }),
+    );
+    expect(screen.getByRole('alert')).toHaveTextContent(/saving was not confirmed/);
+    expect(screen.getByRole('button', { name: 'Retry saving CTU information' })).toBeEnabled();
+    expect(screen.queryByText(/Saved to your StudyFlow account:/)).not.toBeInTheDocument();
   });
 });

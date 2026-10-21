@@ -1,3 +1,6 @@
+import { saveCtuImport, watchCtuImports } from '@/features/ctu/ctuImportService';
+import { combinePortalPages } from '@/features/ctu/portalContract';
+import { type CtuSavedView } from '@/features/ctu/ctuImportContract';
 import { initializeApp, deleteApp, type FirebaseApp } from 'firebase/app';
 import {
   connectAuthEmulator,
@@ -14,6 +17,8 @@ import {
   type Auth,
 } from 'firebase/auth';
 import {
+  collection,
+  getDocsFromServer,
   connectFirestoreEmulator,
   disableNetwork,
   doc,
@@ -398,5 +403,150 @@ describe('real planner persistence contract', () => {
       getDocFromServer(doc(live.database, 'users', account.uid, 'subjects', saved.id)),
     ).rejects.toMatchObject({ code: 'permission-denied' });
     expect((await observePlanner(other.uid)).subjects).toHaveLength(0);
+  });
+});
+
+function ctuFixture() {
+  return combinePortalPages(
+    [
+      {
+        kind: 'uploads',
+        portalName: 'Synthetic Student',
+        course: 'Synthetic Course 2026',
+        modules: [
+          { name: 'KM MDB622', sourceId: '1' },
+          { name: 'PM MDB622', sourceId: '2' },
+        ],
+        assessments: [
+          {
+            module: 'KM MDB622',
+            title: 'FA1',
+            due: '2026-10-26',
+            sourceId: '12',
+            submitted: false,
+          },
+        ],
+        documents: [],
+        resources: [],
+        warnings: [],
+      },
+    ],
+    new Date(Date.now() - 10000),
+  );
+}
+function readCtu(uid: string) {
+  return new Promise<CtuSavedView>((resolve, reject) => {
+    let stop = () => {};
+    const timer = setTimeout(() => {
+      stop();
+      reject(new Error('CTU listener timeout'));
+    }, 10000);
+    stop = watchCtuImports(
+      uid,
+      (value) => {
+        clearTimeout(timer);
+        stop();
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        stop();
+        reject(error);
+      },
+    );
+  });
+}
+describe('real account-scoped CTU import integration', () => {
+  it('commits the supported 200-item bound without partially saving an oversized import', async () => {
+    const account = await createAccount();
+    await ensureProfile(account.uid, 'Synthetic Student');
+    const snapshot = ctuFixture();
+    snapshot.resources = Array.from({ length: 197 }, (_, index) => `Synthetic resource ${index}`);
+    expect((await saveCtuImport(account.uid, snapshot)).added).toBe(200);
+    snapshot.resources.push('Over the bound');
+    await expect(saveCtuImport(account.uid, snapshot)).rejects.toThrow(/200/);
+    expect((await readCtu(account.uid)).items).toHaveLength(200);
+  });
+  it('automatically saves, reloads, deduplicates, retains missing records and tracks changed due dates', async () => {
+    const account = await createAccount();
+    await ensureProfile(account.uid, 'Synthetic Student');
+    const snapshot = ctuFixture();
+    expect(await saveCtuImport(account.uid, snapshot)).toEqual({
+      added: 3,
+      updated: 0,
+      unchanged: 0,
+    });
+    const first = await readCtu(account.uid);
+    expect(first.items).toHaveLength(3);
+    expect(first.items.find((i) => i.kind === 'assessment')).toMatchObject({
+      dueDate: '2026-10-26',
+      dueTime: '',
+    });
+    expect(await saveCtuImport(account.uid, snapshot)).toEqual({
+      added: 0,
+      updated: 0,
+      unchanged: 3,
+    });
+    const changed = ctuFixture();
+    changed.capturedAt = new Date().toISOString();
+    changed.assessments[0]!.due = '2026-10-27T23:30';
+    changed.modules = [];
+    expect(await saveCtuImport(account.uid, changed)).toEqual({
+      added: 0,
+      updated: 1,
+      unchanged: 0,
+    });
+    const reloaded = await readCtu(account.uid);
+    expect(reloaded.items).toHaveLength(3);
+    expect(reloaded.items.find((i) => i.kind === 'assessment')).toMatchObject({
+      dueDate: '2026-10-27',
+      dueTime: '23:30',
+      previousDue: '2026-10-26',
+    });
+    expect(
+      (await getDocsFromServer(collection(live.database, 'users', account.uid, 'assessments')))
+        .empty,
+    ).toBe(true);
+    await expect(saveCtuImport(account.uid, snapshot)).rejects.toThrow(/newer CTU/);
+  });
+  it('keeps concurrent repeated imports idempotent and rejects cancelled saves', async () => {
+    const account = await createAccount();
+    await ensureProfile(account.uid, 'Synthetic Student');
+    const snapshot = ctuFixture();
+    await Promise.all([saveCtuImport(account.uid, snapshot), saveCtuImport(account.uid, snapshot)]);
+    expect((await readCtu(account.uid)).items).toHaveLength(3);
+    const cancel = new AbortController();
+    cancel.abort();
+    await expect(saveCtuImport(account.uid, snapshot, cancel.signal)).rejects.toThrow(
+      /session changed/,
+    );
+  });
+  it('denies a second authenticated account all access to the first import', async () => {
+    const first = await createAccount();
+    await ensureProfile(first.uid, 'First');
+    await saveCtuImport(first.uid, ctuFixture());
+    const item = (await readCtu(first.uid)).items[0]!;
+    const second = await createAccount();
+    await ensureProfile(second.uid, 'Second');
+    await expect(saveCtuImport(first.uid, ctuFixture())).rejects.toThrow(/session changed/);
+    await expect(
+      getDocFromServer(doc(live.database, 'users', first.uid, 'ctuItems', item.id)),
+    ).rejects.toMatchObject({ code: 'permission-denied' });
+    expect((await readCtu(second.uid)).items).toHaveLength(0);
+  });
+  it('cannot save after membership revocation and never queues offline imports', async () => {
+    const account = await createAccount();
+    await ensureProfile(account.uid, 'Synthetic Student');
+    await disableNetwork(live.database);
+    try {
+      await expect(saveCtuImport(account.uid, ctuFixture())).rejects.toBeDefined();
+    } finally {
+      await enableNetwork(live.database);
+    }
+    expect((await readCtu(account.uid)).items).toHaveLength(0);
+    await approveEmail(account.email!, false);
+    await expect(saveCtuImport(account.uid, ctuFixture())).rejects.toMatchObject({
+      code: 'permission-denied',
+    });
   });
 });

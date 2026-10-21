@@ -602,3 +602,104 @@ describe('private profile schema and ownership', () => {
     },
   );
 });
+
+function ctuItemData() {
+  return {
+    kind: 'assessment',
+    portalName: 'Synthetic Student',
+    course: 'Course 2026',
+    title: 'FA1',
+    module: 'KM MDB622',
+    sourceId: '12',
+    dueDate: '2026-10-26',
+    dueTime: '',
+    upload: 'unknown',
+    url: '',
+    previousDue: '',
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+}
+describe('CTU source rules', () => {
+  it('allows only approved owner reads and exact source schemas', async () => {
+    await seed();
+    const path = `users/student-a/ctuItems/${'a'.repeat(64)}`;
+    await assertSucceeds(setDoc(doc(owner(), path), ctuItemData()));
+    await assertSucceeds(getDoc(doc(owner(), path)));
+    const foreign = environment
+      .authenticatedContext('student-b', { email: 'student-b@example.test', email_verified: true })
+      .firestore();
+    await assertFails(getDoc(doc(foreign, path)));
+    await assertFails(getDocs(collection(foreign, 'users/student-a/ctuItems')));
+    await assertFails(setDoc(doc(foreign, path), ctuItemData()));
+    await assertFails(getDoc(doc(environment.unauthenticatedContext().firestore(), path)));
+    await assertFails(deleteDoc(doc(owner(), path)));
+  });
+  it.each([
+    { dueDate: '2026-02-30' },
+    { dueTime: '24:00' },
+    { password: 'secret' },
+    { upload: 'Completed' },
+    { title: '' },
+    { sourceId: '../foreign' },
+    { url: 'https://evil.test' },
+    { previousDue: '2026-10-01' },
+  ])('rejects malformed CTU data %j', async (override) => {
+    await seed();
+    await assertFails(
+      setDoc(doc(owner(), `users/student-a/ctuItems/${'b'.repeat(64)}`), {
+        ...ctuItemData(),
+        ...override,
+      }),
+    );
+  });
+  it('preserves source context and refuses metadata and previous-deadline forgery', async () => {
+    await seed();
+    const ref = doc(owner(), `users/student-a/ctuItems/${'c'.repeat(64)}`);
+    await setDoc(ref, ctuItemData());
+    await assertFails(updateDoc(ref, { course: 'Another course', updatedAt: serverTimestamp() }));
+    await assertFails(updateDoc(ref, { previousDue: '2026-02-30', updatedAt: serverTimestamp() }));
+    await assertFails(
+      updateDoc(ref, { createdAt: serverTimestamp(), updatedAt: serverTimestamp() }),
+    );
+    await assertSucceeds(
+      updateDoc(ref, {
+        dueDate: '2026-10-27',
+        previousDue: '2026-10-26',
+        updatedAt: serverTimestamp(),
+      }),
+    );
+  });
+  it('validates connection metadata, owner access and monotonic capture time', async () => {
+    await seed();
+    const ref = doc(owner(), 'users/student-a/ctuConnections/current');
+    const value = {
+      portalName: 'Synthetic Student',
+      course: '2026',
+      capturedAt: Timestamp.fromMillis(Date.now() - 10000),
+      coverage: 'home: next 30 days only',
+      warnings: '',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    };
+    await assertSucceeds(setDoc(ref, value));
+    await assertFails(
+      updateDoc(ref, { capturedAt: Timestamp.fromMillis(0), updatedAt: serverTimestamp() }),
+    );
+    await assertFails(
+      updateDoc(ref, {
+        capturedAt: Timestamp.fromMillis(Date.now() + 86400000),
+        updatedAt: serverTimestamp(),
+      }),
+    );
+    await assertFails(updateDoc(ref, { token: 'secret', updatedAt: serverTimestamp() }));
+    await assertFails(
+      getDoc(
+        doc(
+          environment.unauthenticatedContext().firestore(),
+          'users/student-a/ctuConnections/current',
+        ),
+      ),
+    );
+  });
+});

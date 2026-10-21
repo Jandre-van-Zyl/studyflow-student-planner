@@ -150,6 +150,44 @@ service cloud.firestore {
       allow update: if plannerOwner(uid) && blockSchema(request.resource.data) && savedMetadata(request.resource.data) && assessmentReference(uid,request.resource.data.assessmentId,request.resource.data.assessmentId == resource.data.assessmentId);
       allow delete: if false;
     }
+    function ctuItemSchema(d) {
+      return d.keys().hasAll(['kind','portalName','course','title','module','sourceId','dueDate','dueTime','upload','url','previousDue','createdAt','updatedAt'])
+        && d.keys().hasOnly(['kind','portalName','course','title','module','sourceId','dueDate','dueTime','upload','url','previousDue','createdAt','updatedAt'])
+        && d.kind in ['module','assessment','document','resource']
+        && line(d.portalName,0,300) && line(d.course,0,300) && line(d.title,1,300) && line(d.module,0,300)
+        && d.sourceId is string && d.sourceId.matches('^([0-9]{1,30})?$')
+        && d.upload in ['seen','not-seen','unknown']
+        && d.dueDate is string && d.dueTime is string && d.previousDue is string && d.previousDue.size() <= 16
+        && (d.kind == 'assessment' ? line(d.module,1,300) && calendarDay(d.dueDate)
+          && (d.dueTime == '' || d.dueTime.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$'))
+          && (d.previousDue == '' || d.previousDue.matches('^20[0-9]{2}-[0-9]{2}-[0-9]{2}(T([01][0-9]|2[0-3]):[0-5][0-9])?$'))
+          : d.module == '' && d.dueDate == '' && d.dueTime == '' && d.previousDue == '' && d.upload == 'unknown')
+        && (d.kind == 'document' ? d.url is string && d.url.size() <= 1200
+          && d.url.matches('^https://ctu[.]campusmanager[.]co[.]za/notice/[^?#]+[.][pP][dD][fF]$') : d.url == '');
+    }
+    function ctuConnectionSchema(d) {
+      return d.keys().hasAll(['portalName','course','capturedAt','coverage','warnings','createdAt','updatedAt'])
+        && d.keys().hasOnly(['portalName','course','capturedAt','coverage','warnings','createdAt','updatedAt'])
+        && line(d.portalName,0,300) && line(d.course,0,300) && line(d.coverage,0,5000) && line(d.warnings,0,5000)
+        && d.capturedAt is timestamp && d.capturedAt <= request.time + duration.value(5,'m');
+    }
+    match /users/{uid}/ctuItems/{id} {
+      allow read: if plannerOwner(uid);
+      allow create: if plannerOwner(uid) && id.matches('^[a-f0-9]{64}$') && ctuItemSchema(request.resource.data) && newMetadata(request.resource.data) && request.resource.data.previousDue == '';
+      allow update: if plannerOwner(uid) && ctuItemSchema(request.resource.data) && savedMetadata(request.resource.data)
+        && request.resource.data.kind == resource.data.kind && request.resource.data.portalName == resource.data.portalName
+        && request.resource.data.course == resource.data.course && request.resource.data.module == resource.data.module
+        && request.resource.data.sourceId == resource.data.sourceId
+        && (request.resource.data.previousDue == resource.data.previousDue || request.resource.data.previousDue == resource.data.dueDate + (resource.data.dueTime == '' ? '' : 'T' + resource.data.dueTime));
+      allow delete: if false;
+    }
+    match /users/{uid}/ctuConnections/{id} {
+      allow read: if id == 'current' && plannerOwner(uid);
+      allow create: if id == 'current' && plannerOwner(uid) && ctuConnectionSchema(request.resource.data) && newMetadata(request.resource.data);
+      allow update: if id == 'current' && plannerOwner(uid) && ctuConnectionSchema(request.resource.data) && savedMetadata(request.resource.data)
+        && request.resource.data.capturedAt >= resource.data.capturedAt;
+      allow delete: if false;
+    }
     match /{document=**} {
       allow read, write: if false;
     }

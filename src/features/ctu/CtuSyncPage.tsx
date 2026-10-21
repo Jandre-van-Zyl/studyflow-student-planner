@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
+import { CtuSavedPanel } from './CtuSavedPanel';
+import { saveCtuImport } from './ctuImportService';
+import { ctuSavingEnabled } from './useCtuImports';
 import { useAuth } from '@/features/auth/authContext';
 import {
   APP_ORIGIN,
@@ -13,10 +16,14 @@ interface PreviewState {
   error: string;
   busy: boolean;
   helper: boolean;
+  saving?: boolean;
+  receipt?: string;
 }
 export function CtuSyncPage() {
   const { status, mode, user } = useAuth();
-  const uid = status === 'ready' && mode === 'cloud' ? (user?.uid ?? '') : '';
+  const uid =
+    status === 'ready' && (mode === 'cloud' || mode === 'emulator') ? (user?.uid ?? '') : '';
+  const canSave = ctuSavingEnabled(mode);
   const [state, setState] = useState<PreviewState>({
     uid: '',
     snapshot: null,
@@ -24,7 +31,7 @@ export function CtuSyncPage() {
     busy: false,
     helper: false,
   });
-  const [confirmed, setConfirmed] = useState(false);
+  const saveAbort = useRef<AbortController | null>(null);
   const pending = useRef<string | null>(null);
   const timeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const active =
@@ -32,7 +39,7 @@ export function CtuSyncPage() {
   useEffect(() => {
     if (!uid) return;
     const probe = crypto.randomUUID();
-    function receive(event: MessageEvent<unknown>) {
+    async function receive(event: MessageEvent<unknown>) {
       if (
         event.source !== window ||
         event.origin !== APP_ORIGIN ||
@@ -65,7 +72,33 @@ export function CtuSyncPage() {
               : 'CTU collection failed.',
           );
         const snapshot = parsePortalSnapshot(message.snapshot);
-        setState({ uid, helper: true, busy: false, error: '', snapshot });
+        if (canSave) {
+          const controller = new AbortController();
+          saveAbort.current = controller;
+          setState({ uid, helper: true, busy: true, saving: true, error: '', snapshot });
+          try {
+            const result = await saveCtuImport(uid, snapshot, controller.signal);
+            if (!controller.signal.aborted)
+              setState({
+                uid,
+                helper: true,
+                busy: false,
+                error: '',
+                snapshot,
+                receipt: `Saved to your StudyFlow account: ${result.added} new, ${result.updated} updated, ${result.unchanged} unchanged.`,
+              });
+          } catch {
+            if (!controller.signal.aborted)
+              setState({
+                uid,
+                helper: true,
+                busy: false,
+                error:
+                  'CTU information was collected but saving was not confirmed. Retry saving while signed into this account.',
+                snapshot,
+              });
+          }
+        } else setState({ uid, helper: true, busy: false, error: '', snapshot });
       } catch (error) {
         setState({
           uid,
@@ -79,6 +112,7 @@ export function CtuSyncPage() {
     window.addEventListener('message', receive);
     window.postMessage({ channel: CTU_CHANNEL, type: 'probe', requestId: probe }, APP_ORIGIN);
     return () => {
+      saveAbort.current?.abort();
       window.removeEventListener('message', receive);
       if (pending.current)
         window.postMessage(
@@ -88,14 +122,13 @@ export function CtuSyncPage() {
       pending.current = null;
       if (timeout.current) clearTimeout(timeout.current);
     };
-  }, [uid]);
+  }, [uid, canSave]);
   if (!uid)
     return (
       <section>
         <h1>Connect CTU</h1>
         <p className="notice mt-5">
-          Sign into your approved StudyFlow cloud account to try the private CTU preview. Layout and
-          emulator modes cannot connect.
+          Sign into your approved StudyFlow account to connect CTU. Layout mode cannot connect.
         </p>
       </section>
     );
@@ -115,10 +148,10 @@ export function CtuSyncPage() {
     }));
   }
   function collect() {
-    if (!active.helper || pending.current) return;
+    if (!active.helper || active.busy || pending.current) return;
     const requestId = crypto.randomUUID();
     pending.current = requestId;
-    setConfirmed(false);
+
     setState({ uid, helper: true, busy: true, snapshot: null, error: '' });
     window.postMessage({ channel: CTU_CHANNEL, type: 'collect', requestId }, APP_ORIGIN);
     timeout.current = setTimeout(() => {
@@ -139,8 +172,9 @@ export function CtuSyncPage() {
     <section>
       <h1>Connect CTU</h1>
       <p className="mt-3 max-w-[65ch] leading-7">
-        Read your modules and deadlines from CampusOnline. This local prototype keeps the result on
-        this screen; it does not save or change your planner.
+        {canSave
+          ? 'Connect CTU to save your modules, known deadlines and resource information to this StudyFlow account. Sign into your own CTU account when the portal opens.'
+          : 'Read your modules and deadlines from CampusOnline. Cloud saving is not enabled in this build; collected information stays in this preview.'}
       </p>
       <p className="mt-4 break-words text-sm text-muted">StudyFlow account: {user?.email}</p>
       <div className="mt-6 border-y border-line py-5">
@@ -159,19 +193,18 @@ export function CtuSyncPage() {
             onClick={collect}
             disabled={!active.helper || active.busy}
           >
-            Connect and preview
+            Connect CTU
           </button>
-          {active.busy && (
+          {active.busy && !active.saving && (
             <button className="btn btn-secondary" onClick={cancel}>
               Cancel collection
             </button>
           )}
-          {snapshot && (
+          {snapshot && !active.busy && !active.receipt && (
             <button
               className="btn btn-secondary"
               onClick={() => {
                 setState((prior) => ({ ...prior, snapshot: null }));
-                setConfirmed(false);
               }}
             >
               Clear preview
@@ -180,8 +213,9 @@ export function CtuSyncPage() {
         </div>
         {active.busy && (
           <p role="status" className="mt-4">
-            Waiting for CTU and collecting supported pages. Allow up to three minutes; enter any
-            password only on the genuine CTU page.
+            {active.saving
+              ? 'Saving CTU information to your StudyFlow account�'
+              : 'Waiting for CTU and collecting supported pages. Allow up to three minutes; enter any password only on the genuine CTU page.'}
           </p>
         )}
         {active.error && (
@@ -189,36 +223,54 @@ export function CtuSyncPage() {
             {active.error}
           </p>
         )}
+        {canSave && active.error && snapshot && !active.busy && (
+          <button
+            className="btn btn-secondary mt-3"
+            onClick={async () => {
+              const controller = new AbortController();
+              saveAbort.current = controller;
+              setState((prior) => ({ ...prior, busy: true, saving: true, error: '' }));
+              try {
+                const result = await saveCtuImport(uid, snapshot, controller.signal);
+                if (!controller.signal.aborted)
+                  setState({
+                    uid,
+                    helper: true,
+                    busy: false,
+                    error: '',
+                    snapshot,
+                    receipt: `Saved to your StudyFlow account: ${result.added} new, ${result.updated} updated, ${result.unchanged} unchanged.`,
+                  });
+              } catch {
+                if (!controller.signal.aborted)
+                  setState((prior) => ({
+                    ...prior,
+                    busy: false,
+                    saving: false,
+                    error: 'Saving was not confirmed. Check your connection and retry.',
+                  }));
+              }
+            }}
+          >
+            Retry saving CTU information
+          </button>
+        )}
       </div>
-      {snapshot && (
+      {active.receipt && (
+        <p role="status" className="notice mt-5">
+          {active.receipt}
+        </p>
+      )}
+      {canSave && <CtuSavedPanel />}
+      {snapshot && !active.receipt && (
         <div className="mt-7 space-y-7">
-          <div>
-            <h2>Account check</h2>
-            <p className="mt-3">
-              CTU portal name: <strong>{snapshot.portalName || 'Not available'}</strong>
-            </p>
-            <label className="mt-3 flex min-h-11 cursor-pointer items-start gap-3">
-              <input
-                type="checkbox"
-                className="mt-1 h-5 min-h-5 w-5 shrink-0 appearance-auto rounded-none border-0 p-0 accent-accent"
-                checked={confirmed}
-                onChange={(event) => setConfirmed(event.target.checked)}
-              />
-              <span className="flex-1">
-                This is my CTU portal account, and I am reviewing its data under {user?.email}.
-              </span>
-            </label>
-            <p className="mt-2 text-sm text-muted">
-              The displayed name is not verified email matching. Nothing is linked or saved by
-              confirming this preview.
-            </p>
-          </div>
+          <p className="text-sm text-muted">
+            CTU portal: <strong>{snapshot.portalName || 'Account label unavailable'}</strong>.
+            Destination: your current StudyFlow account.
+          </p>
           <div>
             <h2>Assessment preview ({snapshot.assessments.length})</h2>
             <p className="mt-2 text-sm text-muted">
-              {confirmed
-                ? 'Account acknowledged for this preview session.'
-                : 'Check the portal account above before using these dates.'}{' '}
               Times below are portal wall times; timezone has not been confirmed.
             </p>
             <div className="mt-4 overflow-x-auto">

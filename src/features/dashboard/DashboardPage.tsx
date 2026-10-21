@@ -1,3 +1,4 @@
+import { CtuSavedPanel } from '@/features/ctu/CtuSavedPanel';
 import { Link } from 'react-router';
 import { useAuth } from '@/features/auth/authContext';
 import { usePlanningPreview } from '@/features/planner/previewContext';
@@ -58,6 +59,7 @@ export function DashboardPage() {
         </Link>
       </header>
       <WeekControls />
+      {import.meta.env.VITE_CTU_PROTOTYPE === 'true' && <CtuSavedPanel compact />}
       <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
         <section>
           <div className="section-heading">
@@ -191,12 +193,18 @@ export function DashboardPage() {
               </>
             ) : (
               <p className="mt-3 text-sm text-muted">
-                No incomplete assessments. Add your next deadline when you are ready.
+                {import.meta.env.VITE_CTU_PROTOTYPE === 'true'
+                  ? 'No incomplete assessments in your study plan. CTU source deadlines are listed separately until planning details are added.'
+                  : 'No incomplete assessments. Add your next deadline when you are ready.'}
               </p>
             )}
           </section>
           <section className="border-t border-line pt-5">
-            <h2>Assessment progress</h2>
+            <h2>
+              {import.meta.env.VITE_CTU_PROTOTYPE === 'true'
+                ? 'Study plan progress'
+                : 'Assessment progress'}
+            </h2>
             <p className="mt-4 text-3xl tabular-nums text-ink">
               {progress.done}
               <span className="text-base text-muted"> / {progress.total} completed</span>
@@ -216,6 +224,8 @@ export function DashboardPage() {
             </p>
             <p className="help mt-2">
               All non-archived assessments, across all weeks. Completion is based on status.
+              {import.meta.env.VITE_CTU_PROTOTYPE === 'true' &&
+                ' CTU source deadlines without planning details are excluded.'}
             </p>
           </section>
           <section className="border-t border-line pt-5">
