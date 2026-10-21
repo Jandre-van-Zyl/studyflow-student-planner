@@ -1,4 +1,5 @@
 import { saveCtuImport, watchCtuImports } from '@/features/ctu/ctuImportService';
+import { planCtuAssessment, refreshCtuPlans } from '@/features/ctu/ctuPlanningService';
 import { combinePortalPages } from '@/features/ctu/portalContract';
 import { type CtuSavedView } from '@/features/ctu/ctuImportContract';
 import { initializeApp, deleteApp, type FirebaseApp } from 'firebase/app';
@@ -457,6 +458,134 @@ function readCtu(uid: string) {
   });
 }
 describe('real account-scoped CTU import integration', () => {
+  it('serializes competing identifier variants before either can create a duplicate', async () => {
+    const account = await createAccount();
+    await ensureProfile(account.uid, 'Synthetic Student');
+    const identified = ctuFixture();
+    const unidentified = structuredClone(identified);
+    unidentified.assessments[0]!.sourceId = null;
+    const results = await Promise.allSettled([
+      saveCtuImport(account.uid, identified),
+      saveCtuImport(account.uid, unidentified),
+    ]);
+    expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+    expect((await readCtu(account.uid)).items.filter((i) => i.kind === 'assessment')).toHaveLength(
+      1,
+    );
+  });
+  it('refuses a changed missing-to-present source ID instead of creating an ambiguous duplicate', async () => {
+    const account = await createAccount();
+    await ensureProfile(account.uid, 'Synthetic Student');
+    const snapshot = ctuFixture();
+    snapshot.assessments[0]!.sourceId = null;
+    await saveCtuImport(account.uid, snapshot);
+    snapshot.capturedAt = new Date().toISOString();
+    snapshot.assessments[0]!.sourceId = '12';
+    await expect(saveCtuImport(account.uid, snapshot)).rejects.toThrow(/source identifier/);
+    expect((await readCtu(account.uid)).items.filter((i) => i.kind === 'assessment')).toHaveLength(
+      1,
+    );
+  });
+  it('turns a source into one schedulable assessment, persists through sign-in, and resyncs without resetting student work', async () => {
+    const account = await createAccount();
+    await ensureProfile(account.uid, 'Synthetic Student');
+    const snapshot = ctuFixture();
+    await saveCtuImport(account.uid, snapshot);
+    const source = (await readCtu(account.uid)).items.find((i) => i.kind === 'assessment')!;
+    const choices = {
+      subjectId: '',
+      type: 'Project' as const,
+      priority: 'High' as const,
+      remainingMinutes: 90,
+      planningTime: '18:00',
+    };
+    const ids = await Promise.all([
+      planCtuAssessment(account.uid, source.id, choices),
+      planCtuAssessment(account.uid, source.id, choices),
+    ]);
+    expect(ids[0]).toBe(ids[1]);
+    let view = await observePlanner(account.uid);
+    expect(view.subjects).toHaveLength(1);
+    expect(view.assessments).toHaveLength(1);
+    const task = await savePlannerRecord(account.uid, 'assessments', {
+      ...view.assessments[0]!,
+      status: 'In Progress',
+      description: 'My study notes',
+      remainingMinutes: 45,
+    });
+    await savePlannerRecord(account.uid, 'blocks', {
+      id: 'ctu-study',
+      assessmentId: task.id,
+      title: 'Revise this assessment',
+      startAt: '2026-10-25T15:00:00+02:00',
+      endAt: '2026-10-25T15:30:00+02:00',
+      status: 'Planned',
+    });
+    snapshot.capturedAt = new Date().toISOString();
+    snapshot.assessments[0]!.due = '2026-10-28T23:30';
+    snapshot.assessments[0]!.title = 'FA1 revised';
+    await saveCtuImport(account.uid, snapshot);
+    await signOut(live.auth);
+    await signInWithEmailAndPassword(live.auth, account.email!, password);
+    view = await observePlanner(account.uid);
+    expect(view.assessments).toHaveLength(1);
+    expect(view.assessments[0]).toMatchObject({
+      title: 'FA1 revised',
+      dueAt: '2026-10-28T23:30:00+02:00',
+      description: 'My study notes',
+      remainingMinutes: 45,
+      status: 'In Progress',
+    });
+    expect(view.blocks).toHaveLength(1);
+    expect((await readCtu(account.uid)).links).toHaveLength(1);
+    await savePlannerRecord(account.uid, 'assessments', {
+      ...view.assessments[0]!,
+      title: 'My own title',
+      dueAt: '2026-10-27T19:00:00+02:00',
+    });
+    snapshot.capturedAt = new Date().toISOString();
+    snapshot.assessments[0]!.due = '2026-10-29T20:00';
+    await saveCtuImport(account.uid, snapshot);
+    expect((await observePlanner(account.uid)).assessments[0]).toMatchObject({
+      title: 'My own title',
+      dueAt: '2026-10-27T19:00:00+02:00',
+    });
+    expect((await readCtu(account.uid)).links![0]!.conflict).toBe(true);
+    await refreshCtuPlans(account.uid);
+    await planCtuAssessment(account.uid, source.id, choices);
+    expect((await observePlanner(account.uid)).assessments).toHaveLength(1);
+  });
+  it('does not create planner records for invalid choices, cancelled work, or another account', async () => {
+    const account = await createAccount();
+    await ensureProfile(account.uid, 'Synthetic Student');
+    await saveCtuImport(account.uid, ctuFixture());
+    const source = (await readCtu(account.uid)).items.find((i) => i.kind === 'assessment')!;
+    const choices = {
+      subjectId: '',
+      type: 'Project' as const,
+      priority: 'High' as const,
+      remainingMinutes: 30,
+      planningTime: '',
+    };
+    await expect(planCtuAssessment(account.uid, source.id, choices)).rejects.toThrow();
+    expect((await observePlanner(account.uid)).subjects).toHaveLength(0);
+    const cancel = new AbortController();
+    cancel.abort();
+    await expect(
+      planCtuAssessment(
+        account.uid,
+        source.id,
+        { ...choices, planningTime: '18:00' },
+        cancel.signal,
+      ),
+    ).rejects.toThrow(/session/);
+    const other = await createAccount();
+    await ensureProfile(other.uid, 'Other');
+    await expect(
+      planCtuAssessment(account.uid, source.id, { ...choices, planningTime: '18:00' }),
+    ).rejects.toThrow(/session/);
+    expect((await observePlanner(other.uid)).assessments).toHaveLength(0);
+  });
   it('commits the supported 200-item bound without partially saving an oversized import', async () => {
     const account = await createAccount();
     await ensureProfile(account.uid, 'Synthetic Student');

@@ -6,7 +6,10 @@ import { CtuSyncPage } from './CtuSyncPage';
 import { APP_ORIGIN, CTU_CHANNEL, combinePortalPages } from './portalContract';
 
 vi.mock('./CtuSavedPanel', () => ({ CtuSavedPanel: () => null }));
-vi.mock('./ctuImportService', () => ({ saveCtuImport: vi.fn() }));
+vi.mock('./ctuImportService', async (original) => ({
+  ...(await original<typeof import('./ctuImportService')>()),
+  saveCtuImport: vi.fn(),
+}));
 import { saveCtuImport } from './ctuImportService';
 afterEach(() => vi.unstubAllEnvs());
 
@@ -218,7 +221,7 @@ describe('automatic account-scoped saving', () => {
         snapshot: combinePortalPages([]),
       }),
     );
-    expect(screen.getByRole('alert')).toHaveTextContent(/saving was not confirmed/);
+    expect(screen.getByRole('alert')).toHaveTextContent(/update were not fully confirmed/);
     expect(screen.getByRole('button', { name: 'Retry saving CTU information' })).toBeEnabled();
     expect(screen.queryByText(/Saved to your StudyFlow account:/)).not.toBeInTheDocument();
   });

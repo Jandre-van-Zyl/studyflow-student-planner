@@ -621,6 +621,49 @@ function ctuItemData() {
   };
 }
 describe('CTU source rules', () => {
+  it('validates owner-only planning links and denies redirection, dangling links, forged metadata and deletion', async () => {
+    await linkedSeed();
+    const id = 'd'.repeat(64);
+    const db = owner();
+    const source = doc(db, `users/student-a/ctuItems/${id}`);
+    const target = doc(db, `users/student-a/assessments/ctu-${id}`);
+    const ref = doc(db, `users/student-a/ctuPlannerLinks/${id}`);
+    await setDoc(source, ctuItemData());
+    const input = {
+      assessmentId: `ctu-${id}`,
+      appliedTitle: 'Requirements',
+      appliedDue: assessmentData().dueAt,
+      sourceRevision: (await getDoc(source)).data()!.updatedAt,
+      conflict: false,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    };
+    await assertFails(setDoc(ref, input));
+    await setDoc(target, assessmentData());
+    await assertSucceeds(setDoc(ref, input));
+    await assertSucceeds(getDocs(collection(db, 'users/student-a/ctuPlannerLinks')));
+    await assertFails(
+      updateDoc(ref, { assessmentId: 'assessment-a', updatedAt: serverTimestamp() }),
+    );
+    await assertFails(
+      updateDoc(ref, { sourceRevision: Timestamp.fromMillis(0), updatedAt: serverTimestamp() }),
+    );
+    await assertFails(updateDoc(ref, { token: 'unexpected', updatedAt: serverTimestamp() }));
+    await assertFails(deleteDoc(ref));
+    const foreign = environment
+      .authenticatedContext('student-b', { email: 'student-b@example.test', email_verified: true })
+      .firestore();
+    await assertFails(getDoc(doc(foreign, `users/student-a/ctuPlannerLinks/${id}`)));
+    await assertFails(setDoc(doc(foreign, `users/student-a/ctuPlannerLinks/${id}`), input));
+    await assertFails(
+      getDoc(
+        doc(
+          environment.unauthenticatedContext().firestore(),
+          `users/student-a/ctuPlannerLinks/${id}`,
+        ),
+      ),
+    );
+  });
   it('allows only approved owner reads and exact source schemas', async () => {
     await seed();
     const path = `users/student-a/ctuItems/${'a'.repeat(64)}`;

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { CtuSavedPanel } from './CtuSavedPanel';
-import { saveCtuImport } from './ctuImportService';
+import { saveCtuImport, ctuSaveErrorMessage } from './ctuImportService';
 import { ctuSavingEnabled } from './useCtuImports';
 import { useAuth } from '@/features/auth/authContext';
 import {
@@ -87,14 +87,13 @@ export function CtuSyncPage() {
                 snapshot,
                 receipt: `Saved to your StudyFlow account: ${result.added} new, ${result.updated} updated, ${result.unchanged} unchanged.`,
               });
-          } catch {
+          } catch (error) {
             if (!controller.signal.aborted)
               setState({
                 uid,
                 helper: true,
                 busy: false,
-                error:
-                  'CTU information was collected but saving was not confirmed. Retry saving while signed into this account.',
+                error: ctuSaveErrorMessage(error),
                 snapshot,
               });
           }
@@ -241,13 +240,13 @@ export function CtuSyncPage() {
                     snapshot,
                     receipt: `Saved to your StudyFlow account: ${result.added} new, ${result.updated} updated, ${result.unchanged} unchanged.`,
                   });
-              } catch {
+              } catch (error) {
                 if (!controller.signal.aborted)
                   setState((prior) => ({
                     ...prior,
                     busy: false,
                     saving: false,
-                    error: 'Saving was not confirmed. Check your connection and retry.',
+                    error: ctuSaveErrorMessage(error),
                   }));
               }
             }}

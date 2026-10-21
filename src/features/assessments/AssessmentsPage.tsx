@@ -8,6 +8,7 @@ import { usePlanningPreview } from '@/features/planner/previewContext';
 import { displayDue, type ViewAssessment } from '@/features/planner/planningView';
 import type { AssessmentPriority, AssessmentStatus, AssessmentType } from '@/shared/types/planner';
 import { usePlannerMutation } from '@/features/planner/usePlannerMutation';
+import { CtuSavedPanel } from '@/features/ctu/CtuSavedPanel';
 
 export function AssessmentsPage() {
   const { data, day } = usePlanningPreview();
@@ -78,6 +79,7 @@ export function AssessmentsPage() {
             Add assessment
           </button>
         </header>
+        {import.meta.env.VITE_CTU_PROTOTYPE === 'true' && <CtuSavedPanel compact unplannedOnly />}
         {!canAdd && (
           <p id="assessment-disabled" className="notice mb-6">
             <Link className="text-link" to="/subjects">

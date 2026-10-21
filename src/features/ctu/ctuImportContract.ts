@@ -1,5 +1,6 @@
 import { Timestamp } from 'firebase/firestore';
 import { parsePortalSnapshot, validPortalDue } from './portalContract';
+import type { CtuPlannerLink } from './ctuPlanningContract';
 
 export interface CtuItemInput {
   kind: 'module' | 'assessment' | 'document' | 'resource';
@@ -20,6 +21,7 @@ export interface CtuItem extends CtuItemInput {
   updatedAt: Timestamp;
 }
 export interface CtuConnection {
+  observedIds?: string;
   portalName: string;
   course: string;
   capturedAt: Timestamp;
@@ -31,6 +33,7 @@ export interface CtuConnection {
 export interface CtuSavedView {
   items: CtuItem[];
   connection: CtuConnection | null;
+  links?: CtuPlannerLink[];
 }
 export const EMPTY_CTU: CtuSavedView = { items: [], connection: null };
 export const MAX_IMPORT_ITEMS = 200;
@@ -121,6 +124,9 @@ export function parseCtuConnection(value: unknown): CtuConnection {
     'warnings',
     'createdAt',
     'updatedAt',
+    ...(value && typeof value === 'object' && Object.hasOwn(value, 'observedIds')
+      ? ['observedIds']
+      : []),
   ]);
   metadata(d);
   if (
@@ -128,7 +134,11 @@ export function parseCtuConnection(value: unknown): CtuConnection {
     !line(d.course) ||
     !line(d.coverage, 5000) ||
     !line(d.warnings, 5000) ||
-    !(d.capturedAt instanceof Timestamp)
+    !(d.capturedAt instanceof Timestamp) ||
+    (d.observedIds !== undefined &&
+      (typeof d.observedIds !== 'string' ||
+        d.observedIds.length > 12999 ||
+        !/^(?:[a-f0-9]{64}(?:,[a-f0-9]{64})*)?$/.test(d.observedIds)))
   )
     throw new Error('Invalid CTU connection.');
   return d as unknown as CtuConnection;

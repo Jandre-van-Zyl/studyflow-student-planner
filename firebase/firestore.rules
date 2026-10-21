@@ -167,7 +167,8 @@ service cloud.firestore {
     }
     function ctuConnectionSchema(d) {
       return d.keys().hasAll(['portalName','course','capturedAt','coverage','warnings','createdAt','updatedAt'])
-        && d.keys().hasOnly(['portalName','course','capturedAt','coverage','warnings','createdAt','updatedAt'])
+        && d.keys().hasOnly(['portalName','course','capturedAt','coverage','warnings','createdAt','updatedAt','observedIds'])
+        && (!d.keys().hasAny(['observedIds']) || (d.observedIds is string && d.observedIds.size() <= 12999 && d.observedIds.matches('^([a-f0-9]{64}(,[a-f0-9]{64})*)?$')))
         && line(d.portalName,0,300) && line(d.course,0,300) && line(d.coverage,0,5000) && line(d.warnings,0,5000)
         && d.capturedAt is timestamp && d.capturedAt <= request.time + duration.value(5,'m');
     }
@@ -186,6 +187,25 @@ service cloud.firestore {
       allow create: if id == 'current' && plannerOwner(uid) && ctuConnectionSchema(request.resource.data) && newMetadata(request.resource.data);
       allow update: if id == 'current' && plannerOwner(uid) && ctuConnectionSchema(request.resource.data) && savedMetadata(request.resource.data)
         && request.resource.data.capturedAt >= resource.data.capturedAt;
+      allow delete: if false;
+    }
+    function ctuLinkSchema(uid, id, d) {
+      return d.keys().hasAll(['assessmentId','appliedTitle','appliedDue','sourceRevision','conflict','createdAt','updatedAt'])
+        && d.keys().hasOnly(['assessmentId','appliedTitle','appliedDue','sourceRevision','conflict','createdAt','updatedAt'])
+        && id.matches('^[a-f0-9]{64}$') && d.assessmentId == 'ctu-' + id
+        && line(d.appliedTitle,1,120) && minute(d.appliedDue) && d.conflict is bool
+        && d.sourceRevision == get(/databases/$(database)/documents/users/$(uid)/ctuItems/$(id)).data.updatedAt
+        && get(/databases/$(database)/documents/users/$(uid)/ctuItems/$(id)).data.kind == 'assessment'
+        && existsAfter(/databases/$(database)/documents/users/$(uid)/assessments/$(d.assessmentId));
+    }
+    match /users/{uid}/ctuPlannerLinks/{id} {
+      allow read: if plannerOwner(uid);
+      allow create: if plannerOwner(uid) && ctuLinkSchema(uid,id,request.resource.data) && newMetadata(request.resource.data)
+        && request.resource.data.conflict == false
+        && request.resource.data.appliedTitle == getAfter(/databases/$(database)/documents/users/$(uid)/assessments/$(request.resource.data.assessmentId)).data.title
+        && request.resource.data.appliedDue == getAfter(/databases/$(database)/documents/users/$(uid)/assessments/$(request.resource.data.assessmentId)).data.dueAt;
+      allow update: if plannerOwner(uid) && ctuLinkSchema(uid,id,request.resource.data) && savedMetadata(request.resource.data)
+        && request.resource.data.assessmentId == resource.data.assessmentId;
       allow delete: if false;
     }
     match /{document=**} {
