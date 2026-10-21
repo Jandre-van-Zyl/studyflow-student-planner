@@ -72,4 +72,53 @@ describe('saved CTU presentation', () => {
     expect(screen.getByRole('button', { name: 'Retry CTU loading' })).toBeEnabled();
     expect(screen.queryByText(/Saved CTU deadlines/)).not.toBeInTheDocument();
   });
+  it('uses assignment wording for FA links in the compact dashboard view', () => {
+    const stamp = Timestamp.fromMillis(0);
+    vi.mocked(useCtuImports).mockReturnValue({
+      uid: 'a',
+      enabled: true,
+      loading: false,
+      error: '',
+      retry: vi.fn(),
+      data: {
+        connection: {
+          portalName: 'Student',
+          course: 'Course',
+          capturedAt: stamp,
+          coverage: 'Partial',
+          warnings: '',
+          createdAt: stamp,
+          updatedAt: stamp,
+        },
+        items: [
+          {
+            id: 'a'.repeat(64),
+            kind: 'assessment',
+            portalName: 'Student',
+            course: 'Course',
+            title: 'SPM622 KM04 FA1',
+            module: 'SPM622',
+            sourceId: '1',
+            dueDate: '2026-10-26',
+            dueTime: '',
+            upload: 'seen',
+            url: '',
+            previousDue: '',
+            createdAt: stamp,
+            updatedAt: stamp,
+          },
+        ],
+      },
+    });
+    render(
+      <MemoryRouter>
+        <CtuSavedPanel compact />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('link', { name: 'Plan assignment' })).toHaveAttribute(
+      'href',
+      '/ctu-sync',
+    );
+    expect(screen.queryByRole('link', { name: 'Add study estimate' })).not.toBeInTheDocument();
+  });
 });

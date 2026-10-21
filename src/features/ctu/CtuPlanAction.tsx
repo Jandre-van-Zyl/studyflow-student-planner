@@ -4,6 +4,7 @@ import type { ViewSubject } from '@/features/planner/planningView';
 import type { AssessmentType, AssessmentPriority } from '@/shared/types/planner';
 import type { CtuItem } from './ctuImportContract';
 import { planCtuAssessment } from './ctuPlanningService';
+import { isCtuAssignment } from './ctuAssessmentKind';
 
 export function CtuPlanAction({
   uid,
@@ -14,6 +15,8 @@ export function CtuPlanAction({
   item: CtuItem;
   subjects: ViewSubject[];
 }) {
+  const assignment = isCtuAssignment(item.title);
+  const [type, setType] = useState<AssessmentType | ''>(assignment ? 'Assignment' : '');
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -64,23 +67,23 @@ export function CtuPlanAction({
   if (saved)
     return (
       <p role="status" className="mt-3">
-        Ready for study planning.{' '}
+        Ready for your planner.{' '}
         <Link className="text-link" to="/planner">
-          Plan study time
+          {type === 'Assignment' ? 'Plan assignment work' : 'Plan study time'}
         </Link>
       </p>
     );
   if (!open)
     return (
       <button className="btn btn-secondary mt-3" onClick={() => setOpen(true)}>
-        Plan this assessment
+        {assignment ? 'Plan assignment' : 'Plan this assessment'}
       </button>
     );
   return (
     <form className="mt-4 border-l-2 border-line pl-4" onSubmit={submit}>
       <p className="help mb-3">
-        Your title and date are already filled in. Add your study estimate once; future syncs update
-        this same assessment. Planning uses SAST.
+        Your title and date are already filled in. Add the time you still need to finish this work;
+        future syncs update this same assessment. Planning uses SAST.
       </p>
       <fieldset disabled={busy} className="grid gap-4 sm:grid-cols-2">
         <label className="field-label">
@@ -98,7 +101,13 @@ export function CtuPlanAction({
         </label>
         <label className="field-label">
           Assessment type
-          <select name="type" className="input mt-1" required defaultValue="">
+          <select
+            name="type"
+            className="input mt-1"
+            required
+            value={type}
+            onChange={(event) => setType(event.target.value as AssessmentType | '')}
+          >
             <option value="" disabled>
               Choose a type
             </option>
@@ -108,7 +117,7 @@ export function CtuPlanAction({
           </select>
         </label>
         <label className="field-label">
-          Study minutes remaining
+          {type === 'Assignment' ? 'Work minutes remaining' : 'Study minutes remaining'}
           <input
             name="minutes"
             className="input mt-1"
@@ -138,7 +147,7 @@ export function CtuPlanAction({
         )}
         <div className="flex gap-3 sm:col-span-2">
           <button className="btn btn-primary" type="submit">
-            {busy ? 'Saving…' : 'Save study plan'}
+            {busy ? 'Saving…' : type === 'Assignment' ? 'Save assignment plan' : 'Save study plan'}
           </button>
           <button type="button" className="btn btn-quiet" onClick={() => setOpen(false)}>
             Cancel

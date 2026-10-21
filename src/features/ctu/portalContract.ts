@@ -155,6 +155,16 @@ export function parsePortalSnapshot(value: unknown): PortalSnapshot {
   };
 }
 export function combinePortalPages(pages: PortalPageCapture[], now = new Date()): PortalSnapshot {
+  const titleKey = (item: PortalAssessment) =>
+    JSON.stringify([item.module.trim().toLowerCase(), item.title.trim().toLowerCase()]);
+  const sourceIds = new Map<string, Set<string>>();
+  for (const page of pages)
+    for (const item of page.assessments) {
+      if (!item.sourceId) continue;
+      const ids = sourceIds.get(titleKey(item)) ?? new Set<string>();
+      ids.add(item.sourceId);
+      sourceIds.set(titleKey(item), ids);
+    }
   const modules = new Map<string, PortalModule>();
   const assessments = new Map<string, PortalSnapshot['assessments'][number]>();
   const documents = new Map<string, PortalDocument>();
@@ -166,10 +176,13 @@ export function combinePortalPages(pages: PortalPageCapture[], now = new Date())
     page.warnings.forEach((warning) => warnings.add(warning));
     page.modules.forEach((module) => modules.set(module.name, module));
     for (const item of page.assessments) {
-      const key = JSON.stringify([
-        item.module.trim().toLowerCase(),
-        item.title.trim().toLowerCase(),
-      ]);
+      const base = titleKey(item);
+      const ambiguous = (sourceIds.get(base)?.size ?? 0) > 1;
+      if (ambiguous && !item.sourceId)
+        throw new Error(
+          'CTU lists multiple assessments with the same title. Their source IDs could not be matched safely. No sync was saved.',
+        );
+      const key = ambiguous ? `${base}|${item.sourceId}` : base;
       const prior = assessments.get(key);
       if (!prior) assessments.set(key, { ...item, sources: [page.kind] });
       else {

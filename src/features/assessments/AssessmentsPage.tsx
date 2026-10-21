@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
 import { FormField } from '@/shared/components/FormField';
 import { Modal } from '@/shared/components/Modal';
+import { SuccessCheck } from '@/shared/components/SuccessCheck';
 import { SelectField } from '@/shared/components/SelectField';
 import { SubjectLabel } from '@/shared/components/PlanningUI';
 import { usePlanningPreview } from '@/features/planner/previewContext';
@@ -225,7 +226,13 @@ export function AssessmentsPage() {
                     <td className="py-5 pr-3 align-top">
                       <Priority value={item.priority} />
                     </td>
-                    <td className="py-5 pr-3 align-top">{item.status}</td>
+                    <td className="py-5 pr-3 align-top">
+                      {item.status === 'Completed' ? (
+                        <SuccessCheck>Completed</SuccessCheck>
+                      ) : (
+                        item.status
+                      )}
+                    </td>
                     <td className="py-3 align-top">{actions(item)}</td>
                   </tr>
                 ))}
@@ -243,7 +250,13 @@ export function AssessmentsPage() {
                     <dt className="text-muted">Due</dt>
                     <dd className="tabular-nums">{displayDue(item.dueAt)} SAST</dd>
                     <dt className="text-muted">Status</dt>
-                    <dd>{item.status}</dd>
+                    <dd>
+                      {item.status === 'Completed' ? (
+                        <SuccessCheck>Completed</SuccessCheck>
+                      ) : (
+                        item.status
+                      )}
+                    </dd>
                     <dt className="text-muted">Work left</dt>
                     <dd>
                       {item.remainingMinutes} min · {item.type}

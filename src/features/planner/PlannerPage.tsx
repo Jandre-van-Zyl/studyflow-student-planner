@@ -7,6 +7,8 @@ import { SubjectLabel, WeekControls } from '@/shared/components/PlanningUI';
 import type { StudyBlockStatus } from '@/shared/types/planner';
 import { usePlanningPreview } from './previewContext';
 import { useCurrentTime } from '@/shared/hooks/useCurrentTime';
+import { useAuth } from '@/features/auth/authContext';
+import { useStudySessions } from '@/features/timer/useStudySessions';
 import { usePlannerMutation } from './usePlannerMutation';
 import {
   addDays,
@@ -26,6 +28,20 @@ import {
 export function PlannerPage() {
   const now = useCurrentTime();
   const { data, day, setDay, budgets } = usePlanningPreview();
+  const { user, status: authStatus } = useAuth();
+  const recorded = useStudySessions(authStatus === 'ready' ? user?.uid : undefined);
+  const weekIds = new Set(
+    data.blocks
+      .filter(
+        (b) =>
+          b.startAt.slice(0, 10) >= monday(day) &&
+          b.startAt.slice(0, 10) <= addDays(monday(day), 6),
+      )
+      .map((b) => b.id),
+  );
+  const studiedSeconds = recorded.rows
+    .filter((row) => weekIds.has(row.blockId))
+    .reduce((sum, row) => sum + row.seconds, 0);
   const { run, busy, error: writeError, preview } = usePlannerMutation();
   const [editing, setEditing] = useState<ViewBlock | 'new' | null>(null);
   const [showCancelled, setShowCancelled] = useState(false);
@@ -64,6 +80,17 @@ export function PlannerPage() {
           <SubjectLabel id={item.subjectId} />
         </div>
         <p className="mt-1 text-xs text-muted">{item.detail}</p>
+        {block && recorded.ready && (
+          <p className="mt-1 text-xs font-semibold text-[#17613b]">
+            Timer recorded:{' '}
+            {Math.floor(
+              recorded.rows
+                .filter((row) => row.blockId === block.id)
+                .reduce((sum, row) => sum + row.seconds, 0) / 60,
+            )}{' '}
+            min studied
+          </p>
+        )}
         {block && (
           <div className="mt-2 flex flex-wrap">
             <button
@@ -148,6 +175,12 @@ export function PlannerPage() {
             Add study block
           </button>
         </header>
+        {recorded.ready && (
+          <p className="notice mb-5">
+            Timer-recorded study this week: {Math.floor(studiedSeconds / 60)} min{' '}
+            {studiedSeconds % 60} sec. Planned time stays separate. Paused time is excluded.
+          </p>
+        )}
         {!canAdd && (
           <p id="block-disabled" className="notice mb-6">
             <Link to="/assessments" className="text-link">

@@ -62,3 +62,7 @@ VITE_FIREBASE_APP_ID=the-public-web-config-value
 These are examples, not issued credentials. All four public config values are required. VITE variables enter the browser bundle. Passwords, private keys and service-account/Admin SDK credentials never belong there. No .firebaserc selects a real project and no deploy workflow is configured. Cloud setup/deployment still requires authorization and real integration testing.
 
 Sources: [Firebase Auth](https://firebase.google.com/docs/auth/web/password-auth), [session persistence](https://firebase.google.com/docs/auth/web/auth-state-persistence), [emulators](https://firebase.google.com/docs/emulator-suite/connect_and_prototype), [rules tests](https://firebase.google.com/docs/rules/unit-tests), [transactions](https://firebase.google.com/docs/firestore/manage-data/transactions).
+
+# Current team startup — 21 October 2026
+
+Follow [TEAM_TESTING.md](TEAM_TESTING.md): `npm run dev` uses real Firebase from public `.env.cloud`; `npm run test` starts isolated demo-studyflow emulators; `npm run dev:local` is the optional manual emulator UI. Older emulator-first references below are superseded for the default dev command. Teammates need no Firebase administration credentials.

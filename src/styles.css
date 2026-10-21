@@ -2,10 +2,15 @@
 
 @theme {
   --font-sans: 'Segoe UI', system-ui, sans-serif;
-  --font-heading: Georgia, 'Times New Roman', serif;
-  --color-ink: #213e51;
-  --color-paper: #faf9f6;
-  --color-accent: #216b64;
+  --font-heading: 'Segoe UI', system-ui, sans-serif;
+  --color-ink: #00263e;
+  --color-paper: #faf9f8;
+  --color-accent: #801a27;
+  --color-accent-hover: #641420;
+  --color-accent-pressed: #4e1019;
+  --color-accent-soft: #f5e9ec;
+  --color-accent-soft-pressed: #edd7dd;
+  --color-brand-sky: #58c8ea;
   --color-muted: #52616c;
   --color-line: #d9dfe2;
   --color-control: #7b8791;
@@ -18,7 +23,7 @@
     color: #344454;
   }
   h1 {
-    @apply font-heading text-[28px] leading-9 font-normal text-ink sm:text-[32px] sm:leading-10;
+    @apply font-heading text-[28px] leading-9 font-semibold tracking-tight text-ink sm:text-[32px] sm:leading-10;
   }
   h2 {
     @apply text-xl leading-7 font-semibold text-ink;
@@ -68,13 +73,13 @@
     @apply text-sm font-semibold text-ink;
   }
   ::selection {
-    @apply bg-teal-100 text-ink;
+    @apply bg-brand-sky/25 text-ink;
   }
   dialog {
     @apply m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-[560px] overflow-y-auto rounded-lg border border-line bg-white p-6 text-ink sm:p-8;
   }
   dialog::backdrop {
-    background: rgb(33 62 81 / 30%);
+    background: rgb(0 38 62 / 30%);
     animation: fade-in 140ms cubic-bezier(0.2, 0, 0, 1);
   }
   p,
@@ -95,19 +100,19 @@
       color 100ms cubic-bezier(0.2, 0, 0, 1);
   }
   .btn-primary {
-    @apply bg-accent text-white hover:bg-[#18544f] active:bg-[#123f3b];
+    @apply bg-accent text-white hover:bg-accent-hover active:bg-accent-pressed;
   }
   .btn-secondary {
     @apply border-control bg-white text-ink hover:bg-slate-100 active:bg-slate-200;
   }
   .btn-quiet {
-    @apply text-accent hover:bg-[#eaf3ef] active:bg-[#d8e9e0];
+    @apply text-accent hover:bg-accent-soft active:bg-accent-soft-pressed;
   }
   .btn:disabled {
     @apply border-line bg-slate-100 text-muted;
   }
   .text-link {
-    @apply inline-flex min-h-11 items-center font-semibold text-accent underline decoration-1 underline-offset-4 hover:text-[#18544f];
+    @apply inline-flex min-h-11 items-center font-semibold text-accent underline decoration-1 underline-offset-4 hover:text-accent-hover;
   }
   .field {
     @apply grid gap-2;
@@ -116,7 +121,7 @@
     @apply text-sm leading-5 text-muted;
   }
   .notice {
-    @apply rounded-md border-l-2 border-accent bg-[#eaf3ef] p-4 text-sm;
+    @apply rounded-md border-l-2 border-accent bg-accent-soft p-4 text-sm;
   }
   .notice-error {
     @apply border-danger bg-[#fcedee] text-danger;
@@ -146,11 +151,11 @@
     @apply border-accent text-accent;
   }
   .nav-link {
-    @apply flex min-h-11 items-center gap-3 rounded-md px-3 py-3 text-sm font-medium text-muted hover:bg-[#edf0ec];
+    @apply flex min-h-11 items-center gap-3 rounded-md px-3 py-3 text-sm font-medium text-muted hover:bg-slate-100;
     transition: background-color 100ms cubic-bezier(0.2, 0, 0, 1);
   }
   .nav-link[aria-current='page'] {
-    @apply bg-[#e4ece7] font-semibold text-accent;
+    @apply bg-accent-soft font-semibold text-accent;
   }
   .content-enter {
     animation: fade-in 180ms cubic-bezier(0.2, 0, 0, 1);
@@ -199,6 +204,9 @@
   to {
     opacity: 1;
   }
+}
+.setup-enter {
+  animation: dialog-in 180ms cubic-bezier(0.2, 0, 0, 1);
 }
 @keyframes dialog-in {
   from {

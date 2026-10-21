@@ -150,6 +150,10 @@ export function ctuInput(item: CtuItem | (CtuItemInput & { id: string })): CtuIt
 }
 export async function prepareCtuImport(value: unknown): Promise<(CtuItemInput & { id: string })[]> {
   const snapshot = parsePortalSnapshot(value);
+  if (!snapshot.course.trim())
+    throw new Error(
+      'CTU course information was not collected. Sync again; your saved course and records have not been replaced.',
+    );
   const common = {
     portalName: snapshot.portalName,
     course: snapshot.course,

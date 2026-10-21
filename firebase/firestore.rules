@@ -208,6 +208,33 @@ service cloud.firestore {
         && request.resource.data.assessmentId == resource.data.assessmentId;
       allow delete: if false;
     }
+    match /users/{uid}/studySessions/{id} {
+      allow read: if plannerOwner(uid);
+      allow create: if plannerOwner(uid) && recordId(id)
+        && request.resource.data.keys().hasAll(['blockId','seconds','startedAt','createdAt'])
+        && request.resource.data.keys().hasOnly(['blockId','seconds','startedAt','createdAt'])
+        && recordId(request.resource.data.blockId)
+        && exists(/databases/$(database)/documents/users/$(uid)/studyBlocks/$(request.resource.data.blockId))
+        && get(/databases/$(database)/documents/users/$(uid)/studyBlocks/$(request.resource.data.blockId)).data.status != 'Cancelled'
+        && request.resource.data.seconds is int && request.resource.data.seconds >= 1 && request.resource.data.seconds <= 10800
+        && request.resource.data.startedAt is timestamp && request.resource.data.startedAt <= request.time
+        && request.time - request.resource.data.startedAt >= duration.value(request.resource.data.seconds - 1,'s')
+        && request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
+    }
+    match /users/{uid}/gradeReports/{id} {
+      function reportSchema(d) {
+        return d.keys().hasAll(['course','year','kind','payload','createdAt','updatedAt'])
+          && d.keys().hasOnly(['course','year','kind','payload','createdAt','updatedAt'])
+          && line(d.course,1,300) && d.year is int && d.year >= 2000 && d.year <= 2099
+          && d.kind in ['results','progress'] && d.payload is string && d.payload.size() <= 150000;
+      }
+      allow read: if plannerOwner(uid);
+      allow create: if plannerOwner(uid) && id.matches('^[a-f0-9]{64}$') && reportSchema(request.resource.data) && newMetadata(request.resource.data);
+      allow update: if plannerOwner(uid) && reportSchema(request.resource.data) && savedMetadata(request.resource.data)
+        && request.resource.data.course == resource.data.course && request.resource.data.year == resource.data.year && request.resource.data.kind == resource.data.kind;
+      allow delete: if false;
+    }
     match /{document=**} {
       allow read, write: if false;
     }

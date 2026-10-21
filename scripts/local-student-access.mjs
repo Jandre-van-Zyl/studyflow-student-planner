@@ -25,7 +25,9 @@ if (args.length === 1 && args[0] === '--help') {
       signal: AbortSignal.timeout(5000),
     },
   ).catch(() => {
-    throw new Error('Start npm run dev first. Only the local Firestore emulator is supported.');
+    throw new Error(
+      'Start npm run dev:local first. Only the local Firestore emulator is supported.',
+    );
   });
   if (!response.ok)
     throw new Error(`Local approval failed (${response.status}); no cloud request was sent.`);

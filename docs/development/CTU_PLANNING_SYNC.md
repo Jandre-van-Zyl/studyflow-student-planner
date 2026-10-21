@@ -1,6 +1,6 @@
 # CTU information in the study planner
 
-21 October 2026. Extends [saved CTU imports](CTU_SAVED_IMPORT.md) locally. Cloud saving remains disabled; the new rules are not deployed.
+21 October 2026. Extends [saved CTU imports](CTU_SAVED_IMPORT.md). Jandre subsequently approved live activation: the tested rules are deployed to `studyflow-ctu-capstone`, and this prototype's ignored `.env.cloud.local` enables saving. The locally served app has completed a real account sync, navigation/reload checks and a repeat sync without duplicate records. See [activation verification](../testing/CTU_Cloud_Activation_2026-10-21.md). This does not enable the feature in other checkouts or publish the website.
 
 ## Student behaviour
 

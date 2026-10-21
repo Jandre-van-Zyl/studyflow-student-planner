@@ -29,6 +29,7 @@ export interface CtuPlanningChoices {
   priority: AssessmentPriority;
   remainingMinutes: number;
   planningTime: string;
+  completed?: boolean;
 }
 export async function planCtuAssessment(
   uid: string,
@@ -42,11 +43,19 @@ export async function planCtuAssessment(
   const linkRef = doc(database, 'users', uid, 'ctuPlannerLinks', sourceId);
   const existingLink = await getDocFromServer(linkRef);
   check();
-  if (existingLink.exists()) return parseCtuPlannerLink(sourceId, existingLink.data()).assessmentId;
+  if (existingLink.exists()) {
+    if (choices.completed)
+      throw new Error(
+        'This assignment is already in your planner. Reload and mark it complete there.',
+      );
+    return parseCtuPlannerLink(sourceId, existingLink.data()).assessmentId;
+  }
   const first = await getDocFromServer(sourceRef);
   if (!first.exists()) throw new Error('Sync this CTU assessment first.');
   const initial = parseCtuItem(sourceId, first.data());
   if (initial.kind !== 'assessment') throw new Error('Choose a CTU assessment.');
+  if (choices.completed && (initial.upload !== 'seen' || choices.type !== 'Assignment'))
+    throw new Error('Sync an uploaded assignment before marking it complete.');
   const id = `ctu-${sourceId}`;
   // Validate all planning choices before creating even the optional module record.
   const draft = {
@@ -55,8 +64,8 @@ export async function planCtuAssessment(
     title: initial.title.slice(0, 120),
     type: choices.type,
     priority: choices.priority,
-    status: 'To Do' as const,
-    remainingMinutes: choices.remainingMinutes,
+    status: choices.completed ? ('Completed' as const) : ('To Do' as const),
+    remainingMinutes: choices.completed ? 0 : choices.remainingMinutes,
     archived: false,
     description: `Imported from CTU: ${initial.module}\nSource title: ${initial.title}\n${initial.dueTime ? 'Portal wall time interpreted in SAST for planning.' : 'CTU supplied a date only; the time is your planning target.'}`,
     dueAt: `${initial.dueDate}T${initial.dueTime || choices.planningTime}:00+02:00`,
@@ -93,6 +102,10 @@ export async function planCtuAssessment(
     check();
     if (linkSnap.exists()) {
       parseCtuPlannerLink(sourceId, linkSnap.data());
+      if (choices.completed)
+        throw new Error(
+          'This assignment was just added to your planner. Reload before marking it complete.',
+        );
       return; // Repeated or concurrent activation never resets student progress.
     }
     if (targetSnap.exists())
@@ -104,12 +117,14 @@ export async function planCtuAssessment(
     )
       throw new Error('Choose an active subject and sync CTU again.');
     const source = parseCtuItem(sourceId, sourceSnap.data());
+    if (choices.completed && source.upload !== 'seen')
+      throw new Error('The uploaded file is no longer confirmed. Sync CTU and retry.');
     if (!source.updatedAt.isEqual(initial.updatedAt))
       throw new Error('CTU changed while you were planning. Reopen this item.');
     const input = toPlannerInput('assessments', { ...draft, subjectId });
     tx.set(targetRef, {
       ...input,
-      completedAt: null,
+      completedAt: choices.completed ? serverTimestamp() : null,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });

@@ -1,3 +1,14 @@
+# Current team commands — 21 October 2026
+
+- `npm ci` installs locked dependencies.
+- `npm run dev` opens the local site on4173/account with the real shared Firebase backend. Use your own verified, approved CTU email. Public configuration is included; no Firebase console login is needed.
+- `npm run test` starts isolated local Auth/Java Firestore emulators and runs app, rules and integration tests against demo-studyflow. Java21+ required.
+- `npm run dev:local` is the optional manual emulator app on5173.
+
+Read [the simple team testing guide](docs/development/TEAM_TESTING.md) first. The older setup below describes the manual emulator workflow and dated baseline; it is not the current default startup.
+
+---
+
 # StudyFlow - Student Planner
 
 Software Engineering 2 capstone, Group 1, CTU Training Solutions.
@@ -19,10 +30,10 @@ git switch --track origin/aneesah
 git merge origin/Main
 npm ci
 Copy-Item .env.example .env.local
-npm run dev
+npm run dev:local
 ```
 
-`npm run dev` starts local Auth/Firestore emulators first, then opens **http://127.0.0.1:5173/account** for login/sign-up. Use a disposable test account; no Firebase cloud account is needed. `npm ci` installs all locked dependencies and tools; no global React, Tailwind, TypeScript, Vite or Firebase install is needed.
+`npm run dev:local` starts local Auth/Firestore emulators first, then opens **http://127.0.0.1:5173/account** for login/sign-up. Use a disposable test account; no Firebase cloud account is needed. `npm ci` installs all locked dependencies and tools; no global React, Tailwind, TypeScript, Vite or Firebase install is needed.
 
 Already cloned and have a clean working tree? Replace `aneesah` below with your branch:
 
@@ -32,7 +43,7 @@ git fetch origin
 git switch aneesah
 git merge origin/Main
 npm ci
-npm run dev
+npm run dev:local
 ```
 
 If your local branch does not exist yet, use `git switch --track origin/aneesah`. Copy `.env.example` only if `.env.local` is missing; preserve existing local values. Commit or safely preserve unfinished work before switching or merging. The owner does not automatically advance your remote personal branch.
@@ -42,14 +53,14 @@ If your local branch does not exist yet, use `git switch --track origin/aneesah`
 Use Java 21+ and one terminal at the repo root:
 
 ```powershell
-npm run dev
+npm run dev:local
 ```
 
 Open http://127.0.0.1:5173/account and register a synthetic test account. Settings saves the display name and all seven daily study budgets. Defaults are zero; choose your own budgets. Sessions survive refresh in the same tab. Sign out when finished. Local accounts/data disappear when the emulators stop.
 
 **Student access update, 19 October:** accounts must verify email and have an active approved-list entry before profile/planner access. In the emulator, use **Send verification email**, open the printed local link, then **Check access again**. Approve your synthetic address in a second terminal with `npm run demo:approve -- student@example.test`. Nothing is seeded or auto-approved. Read [student access setup and recovery](docs/development/STUDENT_ACCESS.md).
 
-Ctrl+C stops the app and its emulators together. Do not start a separate emulator alongside `npm run dev`. For layout-only work without Java/backend, use `npm run dev:preview`. Advanced separate-terminal workflow remains `npm run emulators` plus `npm run dev:emulator`. Read [Firebase setup](docs/development/FIREBASE.md).
+Ctrl+C stops the app and its emulators together. Do not start a separate emulator alongside `npm run dev:local`. For layout-only work without Java/backend, use `npm run dev:preview`. Advanced separate-terminal workflow remains `npm run emulators` plus `npm run dev:emulator`. Read [Firebase setup](docs/development/FIREBASE.md).
 
 ## Team and proposed work
 
@@ -98,7 +109,7 @@ Cloud releases have separate checked build/preview commands and isolated output.
 | Command                             | Purpose                                                                         |
 | ----------------------------------- | ------------------------------------------------------------------------------- |
 | `npm ci`                            | Install exact versions from package-lock.json                                   |
-| `npm run dev`                       | Starts local Auth/Firestore and app; opens login/sign-up; Ctrl+C stops all      |
+| `npm run dev:local`                 | Starts local Auth/Firestore and app; opens login/sign-up; Ctrl+C stops all      |
 | `npm run dev:emulator`              | App only in forced emulator mode; requires a separately running backend         |
 | `npm run dev:preview`               | Layout-only frontend; forces disabled mode, no backend needed                   |
 | `npm run check`                     | Format check, lint, types, unit/UI tests and production build                   |
@@ -117,7 +128,7 @@ The production dependency audit is clear at this baseline; the optional Firebase
 
 ## Firebase and status
 
-Read [FIREBASE.md](docs/development/FIREBASE.md) and [current cloud setup status](docs/development/CLOUD_PROJECT_STATUS.md). `npm run dev` forces local emulators and `npm run dev:preview` forces disabled mode. Explicit cloud builds require complete public web values. Project `studyflow-ctu-capstone` and its web app are registered on Spark; no billing was linked or app deployed. Cloud Authentication/database setup and rollout of verified membership remain pending. Maximum permitted spend is zero.
+Read [FIREBASE.md](docs/development/FIREBASE.md) and [current cloud setup status](docs/development/CLOUD_PROJECT_STATUS.md). `npm run dev:local` forces local emulators and `npm run dev:preview` forces disabled mode. Explicit cloud builds require complete public web values. Project `studyflow-ctu-capstone` and its web app are registered on Spark; no billing was linked or app deployed. Cloud Authentication/database setup and rollout of verified membership remain pending. Maximum permitted spend is zero.
 
 Firestore rules permit valid own-profile access and strictly validated own planner collections. Cross-user/unauthenticated access, unknown collections and hard deletes remain denied. Subject-code claims enforce uniqueness atomically. See the [contract](docs/design/Planner_Data_Contract.md). `.env.local` stays outside Git; never put passwords, service-account JSON or private keys in the frontend.
 

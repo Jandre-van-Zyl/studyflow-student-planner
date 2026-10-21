@@ -7,6 +7,7 @@ import { EMPTY_VIEW, ZERO_BUDGETS, exampleView, sastDay } from './planningView';
 import { savePlannerRecord, watchPlanner } from './plannerService';
 import { PlannerError, toPlannerInput, type PlannerViewRecord } from './plannerContract';
 import type { PlannerKind } from '@/shared/types/planner';
+import { StudyTimer } from '@/features/timer/StudyTimer';
 
 export function PlanningWorkspace() {
   const { user, status } = useAuth();
@@ -118,6 +119,17 @@ function Workspace({ uid }: { uid?: string }) {
             <br />
             {preview ? 'Changes reset on refresh.' : 'Private to your account · SAST'}
           </p>
+          <label className="text-sm">
+            View date (SAST)
+            <input
+              aria-label="View planner date"
+              type="date"
+              value={day}
+              onChange={(event) => {
+                if (/^\d{4}-\d{2}-\d{2}$/.test(event.target.value)) setDay(event.target.value);
+              }}
+            />
+          </label>
           {preview &&
             (hasData ? (
               <button type="button" className="text-link text-sm" onClick={() => setClearing(true)}>
@@ -191,6 +203,7 @@ function Workspace({ uid }: { uid?: string }) {
           </div>
         </Modal>
       )}
+      {(status === 'ready' || preview) && <StudyTimer uid={uid} blocks={data.blocks} />}
     </PreviewContext.Provider>
   );
 }

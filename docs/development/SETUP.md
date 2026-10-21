@@ -1,5 +1,7 @@
 # Team setup - Windows / PowerShell
 
+**Current startup, 21 October:** use [TEAM_TESTING.md](TEAM_TESTING.md). `npm run dev` is the local4173 website with the real Firebase backend; `npm run test` runs the isolated Java/Auth emulator suite. Public cloud configuration is included. The older instructions below describe the optional `dev:local` emulator workflow, not the current default. No Firebase console/CLI login is required for teammates.
+
 Baseline: 16 October 2026. One root project, local dependencies, npm throughout.
 
 **Access update, 19 October:** verification and explicit student approval are required after registration. Follow [STUDENT_ACCESS.md](STUDENT_ACCESS.md), including the emulator verification link and `demo:approve` command. Existing older register-and-open instructions below require those steps first. No account is seeded automatically.

@@ -22,7 +22,9 @@ export function AccountPage() {
   const from: unknown = (location.state as { from?: unknown } | null)?.from;
   const destination =
     typeof from === 'string' &&
-    (/^\/(dashboard|subjects|assessments|planner|settings)(\?.*)?$/.test(from) ||
+    (/^\/(dashboard|subjects|assessments|planner|settings|class-activities|study-setup|grades)(\?.*)?$/.test(
+      from,
+    ) ||
       (import.meta.env.VITE_CTU_PROTOTYPE === 'true' && from === '/ctu-sync'))
       ? from
       : '/dashboard';

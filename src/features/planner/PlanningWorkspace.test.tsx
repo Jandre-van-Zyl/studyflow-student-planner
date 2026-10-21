@@ -12,6 +12,7 @@ import { SubjectsPage } from '@/features/subjects/SubjectsPage';
 import { EMPTY_VIEW, exampleView, type PlanningView } from './planningView';
 import { PlannerError } from './plannerContract';
 import { savePlannerRecord, watchPlanner } from './plannerService';
+import { Timestamp } from 'firebase/firestore';
 
 vi.mock('./plannerService', () => ({ savePlannerRecord: vi.fn(), watchPlanner: vi.fn() }));
 let observers: {
@@ -34,7 +35,10 @@ function context(uid: string) {
   return authFixture({
     status: 'ready',
     user: { uid, email: uid + '@example.test', emailVerified: true },
-    profile: profileFixture(uid),
+    profile: {
+      ...profileFixture(uid),
+      updatedAt: Timestamp.fromMillis(profileFixture(uid).createdAt.toMillis() + 1000),
+    },
   });
 }
 function tree(auth: AuthContextValue, path = '/dashboard') {

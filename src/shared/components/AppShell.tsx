@@ -8,6 +8,8 @@ const navigation: { to: string; label: string; icon: IconName }[] = [
   { to: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
   { to: '/subjects', label: 'Subjects', icon: 'subjects' },
   { to: '/assessments', label: 'Assessments', icon: 'assessments' },
+  { to: '/grades', label: 'Grade book', icon: 'assessments' },
+  { to: '/class-activities', label: 'Class activities', icon: 'activities' },
   { to: '/planner', label: 'Weekly planner', icon: 'planner' },
   { to: '/account', label: 'Account', icon: 'account' },
   { to: '/settings', label: 'Settings', icon: 'settings' },
@@ -53,13 +55,18 @@ export function AppShell() {
   const brand = (
     <NavLink
       to="/dashboard"
-      className="flex min-h-11 w-fit items-center gap-3 text-xl font-semibold text-ink"
+      className="flex min-h-11 w-fit shrink-0 flex-col items-start gap-2 text-ink"
       aria-label="StudyFlow for CTU home"
     >
-      <img src="/favicon.svg" alt="" className="h-8 w-8" />
-      <span>
-        <span className="block">StudyFlow</span>
-        <span className="block text-xs font-normal text-muted">CTU student planner</span>
+      <img
+        src="/brand/ctu-logo.svg"
+        alt="CTU Training Solutions"
+        width="250"
+        height="80"
+        className="h-auto w-40 lg:w-[184px]"
+      />
+      <span className="text-sm font-semibold">
+        StudyFlow <span className="font-normal text-muted">· Student planner</span>
       </span>
     </NavLink>
   );
@@ -75,10 +82,10 @@ export function AppShell() {
       </a>
       {privateShell ? (
         <>
-          <aside className="sticky top-0 hidden h-dvh flex-col border-r border-line py-8 pr-6 lg:flex">
+          <aside className="sticky top-0 hidden h-dvh flex-col overflow-y-auto border-r border-line py-8 pr-6 lg:flex">
             {brand}
-            <div className="mt-10">{links}</div>
-            <div className="mt-auto border-t border-line pt-5">
+            <div className="mt-10 shrink-0">{links}</div>
+            <div className="mt-auto shrink-0 border-t border-line pt-5">
               <p className="break-words text-sm font-semibold text-ink">
                 {profile?.displayName ?? 'Layout preview'}
               </p>

@@ -5,6 +5,9 @@ import { CtuPlanAction } from './CtuPlanAction';
 import { addDays, sastDay } from '@/features/planner/planningView';
 import { useCurrentTime } from '@/shared/hooks/useCurrentTime';
 import { useCtuImports } from './useCtuImports';
+import { isCtuAssignment } from './ctuAssessmentKind';
+import { CtuCompleteAction } from './CtuCompleteAction';
+import { SuccessCheck } from '@/shared/components/SuccessCheck';
 
 export function CtuSavedPanel({
   compact = false,
@@ -75,8 +78,7 @@ export function CtuSavedPanel({
     <section className="mt-7 border-t border-line pt-6">
       <div className="section-heading">
         <h2>
-          {unplannedOnly ? 'CTU items needing planning details' : 'Saved CTU deadlines'} (
-          {deadlines.length})
+          {unplannedOnly ? 'Ready to plan' : 'CTU deadlines'} ({deadlines.length})
         </h2>
         {compact && (
           <Link className="text-link" to="/ctu-sync">
@@ -84,22 +86,19 @@ export function CtuSavedPanel({
           </Link>
         )}
       </div>
-      <p className="help mt-2">
-        Saved to your StudyFlow account. Last collected{' '}
-        {connection.capturedAt
-          .toDate()
-          .toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' })}{' '}
-        SAST.
-      </p>
-      <p className="mt-3 text-sm">
+      <p className="help mt-2">Saved from CTU to your private StudyFlow account.</p>
+      <p className="mt-3 rounded-lg bg-accent-soft px-4 py-3 text-sm font-semibold text-ink">
         {open.filter((item) => item.dueDate >= today && item.dueDate <= addDays(today, 6)).length}{' '}
         known deadlines in the next 7 days · {open.filter((item) => item.dueDate < today).length}{' '}
         past due dates · {needsEstimate} awaiting planning details
       </p>
-      <p className="help mt-2">
-        Portal dates retain their supplied precision; timezone is unconfirmed. These source
-        deadlines become schedulable after you add your own study estimate and missing details.
-      </p>
+      <details className="help mt-3">
+        <summary className="cursor-pointer text-link">About these dates and planning</summary>
+        <p className="mt-2">
+          Portal dates retain their supplied precision; timezone is unconfirmed. Add the time needed
+          for your work to include these items in your study plan.
+        </p>
+      </details>
       {now - connection.capturedAt.toMillis() >= 7 * 86400000 && (
         <p className="notice mt-3">
           Your CTU information is at least a week old.{' '}
@@ -109,15 +108,42 @@ export function CtuSavedPanel({
           to check for changes. Your saved work stays available.
         </p>
       )}
-      <ul className="mt-4 divide-y divide-line">
+      <ul className="mt-4 divide-y divide-line rounded-lg border border-line bg-white px-4 sm:px-5">
         {(compact ? deadlines.slice(0, 5) : deadlines).map((item) => (
-          <li key={item.id} className="py-4">
-            <p className="font-semibold">{item.title}</p>
-            <p className="text-sm text-muted">{item.module}</p>
+          <li
+            key={item.id}
+            className="relative py-4 pl-4 before:absolute before:top-5 before:bottom-5 before:left-0 before:w-1 before:rounded-full before:bg-accent"
+          >
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+              <p className="font-semibold text-ink">{item.title}</p>
+              <p
+                className={`text-sm font-semibold ${item.dueDate < today ? 'text-danger' : 'text-accent'}`}
+              >
+                Due{' '}
+                {item.dueDate === today
+                  ? 'today · '
+                  : item.dueDate === addDays(today, 1)
+                    ? 'tomorrow · '
+                    : ''}
+                {item.dueDate}
+                {item.dueTime ? ` · ${item.dueTime}` : ' · Time not supplied'}
+              </p>
+            </div>
+            {isCtuAssignment(item.title) && <p className="help">Assignment · FA</p>}
+            {item.upload === 'seen' &&
+              (isCtuAssignment(item.title) ||
+                tasks.get(`ctu-${item.id}`)?.type === 'Assignment') && (
+                <div className="mt-2">
+                  <SuccessCheck>Uploaded to CTU</SuccessCheck>
+                </div>
+              )}
+            <p className="mt-1 text-sm text-muted">{item.module}</p>
             {tasks.get(`ctu-${item.id}`) && (
               <p className="help mt-1">
                 Your plan: {tasks.get(`ctu-${item.id}`)!.status} ·{' '}
-                {tasks.get(`ctu-${item.id}`)!.remainingMinutes} study minutes remaining
+                {tasks.get(`ctu-${item.id}`)!.remainingMinutes}{' '}
+                {tasks.get(`ctu-${item.id}`)!.type === 'Assignment' ? 'work' : 'study'} minutes
+                remaining
                 {tasks.get(`ctu-${item.id}`)!.archived ? ' · Archived' : ''}
               </p>
             )}
@@ -126,10 +152,6 @@ export function CtuSavedPanel({
                 Not seen in the latest sync. Retained because CTU lists can be incomplete.
               </p>
             )}
-            <p className="mt-1 text-sm">
-              Due {item.dueDate}
-              {item.dueTime ? ` at ${item.dueTime}` : ' · Time not supplied'}
-            </p>
             {item.previousDue && (
               <p className="mt-1 text-sm text-warning">
                 Deadline changed from {item.previousDue.replace('T', ' ')}.
@@ -151,7 +173,7 @@ export function CtuSavedPanel({
                 </Link>
                 {' · '}
                 <Link className="text-link" to="/planner">
-                  Plan study time
+                  {isCtuAssignment(item.title) ? 'Plan assignment work' : 'Plan study time'}
                 </Link>
                 {data.links.find((link) => link.id === item.id)?.conflict && (
                   <p className="mt-2 text-warning">
@@ -162,7 +184,7 @@ export function CtuSavedPanel({
               </div>
             ) : compact ? (
               <Link className="text-link mt-3 inline-block" to="/ctu-sync">
-                Add study estimate
+                {isCtuAssignment(item.title) ? 'Plan assignment' : 'Add study estimate'}
               </Link>
             ) : (
               planner?.available && (
@@ -174,6 +196,12 @@ export function CtuSavedPanel({
                 />
               )
             )}
+            <CtuCompleteAction
+              key={`complete-${uid}-${item.id}`}
+              uid={uid}
+              item={item}
+              task={tasks.get(`ctu-${item.id}`)}
+            />
           </li>
         ))}
       </ul>

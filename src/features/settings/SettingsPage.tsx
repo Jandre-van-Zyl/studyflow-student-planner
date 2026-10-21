@@ -120,6 +120,9 @@ function ProfileForm({ uid, profile }: { uid: string; profile: UserProfile }) {
   return (
     <section className="max-w-[560px]">
       <h1>Profile and study budgets</h1>
+      <Link className="text-link mt-3 inline-block" to="/study-setup">
+        Set up my study routine again
+      </Link>
       <p className="mt-3 max-w-2xl leading-7 text-muted">
         Choose how much time you want to set aside each day. A budget is your plan, not a record of
         time already studied.

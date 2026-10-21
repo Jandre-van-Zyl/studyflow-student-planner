@@ -12,6 +12,20 @@ function renderAt(path: string) {
 }
 
 describe('shared starter navigation', () => {
+  it('opens Class activities from navigation and returns to the assessments workspace', () => {
+    renderAt('/dashboard');
+    fireEvent.click(screen.getByRole('link', { name: 'Class activities' }));
+    expect(screen.getByRole('heading', { level: 1, name: 'Class activities' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Class activities' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(
+      screen.getByText(/file uploads and quiz submissions are not available yet/),
+    ).toBeVisible();
+    fireEvent.click(screen.getByRole('link', { name: 'Open assessments' }));
+    expect(screen.getByRole('heading', { level: 1, name: 'Assessments' })).toBeVisible();
+  });
   it('shows a newly saved subject when it was added from Archived', async () => {
     renderAt('/subjects');
     fireEvent.click(screen.getByRole('button', { name: 'Archived (0)' }));

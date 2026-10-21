@@ -99,6 +99,64 @@ async function linkedSeed() {
   await setDoc(doc(owner(), 'users/student-a/assessments/assessment-a'), assessmentData());
 }
 describe('planner owner, schema and reference contracts', () => {
+  it('allows only private bounded grade reports and preserves report identity', async () => {
+    await seed();
+    const db = owner();
+    const ref = doc(db, 'users/student-a/gradeReports/' + 'a'.repeat(64));
+    const data = {
+      course: 'Software Engineer',
+      year: 2026,
+      kind: 'results',
+      payload: '{}',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    };
+    await assertSucceeds(setDoc(ref, data));
+    await assertFails(updateDoc(ref, { year: 2025, updatedAt: serverTimestamp() }));
+    await assertFails(
+      updateDoc(ref, { payload: 'x'.repeat(150001), updatedAt: serverTimestamp() }),
+    );
+    await assertFails(getDoc(doc(environment.unauthenticatedContext().firestore(), ref.path)));
+    await assertFails(deleteDoc(ref));
+  });
+  it('keeps recorded study sessions private, immutable and bounded by elapsed time', async () => {
+    await linkedSeed();
+    const db = owner();
+    await setDoc(doc(db, 'users/student-a/studyBlocks/block-a'), blockData());
+    const value = {
+      blockId: 'block-a',
+      seconds: 60,
+      startedAt: Timestamp.fromMillis(Date.now() - 120000),
+      createdAt: serverTimestamp(),
+    };
+    const ref = doc(db, 'users/student-a/studySessions/session-a');
+    await assertSucceeds(setDoc(ref, value));
+    await assertFails(updateDoc(ref, { seconds: 120 }));
+    await assertFails(deleteDoc(ref));
+    await assertFails(
+      getDoc(
+        doc(
+          environment.unauthenticatedContext().firestore(),
+          'users/student-a/studySessions/session-a',
+        ),
+      ),
+    );
+    await assertFails(
+      setDoc(doc(db, 'users/student-a/studySessions/too-long'), { ...value, seconds: 10801 }),
+    );
+    await assertFails(
+      setDoc(doc(db, 'users/student-a/studySessions/future'), {
+        ...value,
+        startedAt: Timestamp.fromMillis(Date.now() + 60000),
+      }),
+    );
+    await assertFails(
+      setDoc(doc(db, 'users/student-a/studySessions/missing'), { ...value, blockId: 'missing' }),
+    );
+    await assertFails(
+      setDoc(doc(db, 'users/student-a/studySessions/invented'), { ...value, seconds: 1000 }),
+    );
+  });
   it.each([
     { name: '' },
     { name: ' leading' },

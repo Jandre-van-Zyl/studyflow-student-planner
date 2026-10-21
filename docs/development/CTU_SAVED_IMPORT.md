@@ -2,7 +2,7 @@
 
 **21 October follow-up:** [CTU planning sync](CTU_PLANNING_SYNC.md) extends this baseline with planning activation, repeat deadline updates, personal-edit preservation, last-sync visibility and freshness notices. The first-stage limitations below describe the earlier checkpoint where explicitly superseded by that guide.
 
-21 October 2026. Local implementation on `prototype/ctu-sync-20261021`; no cloud rules deployment, real account import, GitHub push or Hosting release is included.
+21 October 2026. This first-stage record describes local implementation on `prototype/ctu-sync-20261021`. A later explicitly approved [cloud activation](../testing/CTU_Cloud_Activation_2026-10-21.md) deployed the rules and verified real account imports in the local prototype. No GitHub push or Hosting release is included.
 
 ## Student workflow and identity
 

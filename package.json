@@ -10,7 +10,7 @@
     "npm": ">=10 <12"
   },
   "scripts": {
-    "dev": "firebase emulators:exec --project demo-studyflow --only auth,firestore --ui \"npm run dev:emulator\"",
+    "dev": "vite --mode cloud --host 127.0.0.1 --port 4173 --strictPort --open /account",
     "dev:emulator": "vite --mode emulator --host 127.0.0.1 --port 5173 --strictPort --open /account",
     "dev:preview": "vite --mode layout --host 127.0.0.1 --port 5173 --strictPort",
     "demo:approve": "node scripts/local-student-access.mjs",
@@ -24,15 +24,20 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "vitest run",
+    "test": "firebase emulators:exec --project demo-studyflow --only auth,firestore \"npm run test:unit && npm run test:rules:run && npm run test:integration:run\"",
     "test:watch": "vitest",
     "test:rules": "firebase emulators:exec --project demo-studyflow --only firestore \"vitest run --config vitest.rules.config.ts\"",
     "test:integration": "firebase emulators:exec --project demo-studyflow --only auth,firestore \"vitest run --config vitest.integration.config.ts\"",
     "emulators": "firebase emulators:start --project demo-studyflow --only auth,firestore",
-    "check": "prettier --check . && eslint . && tsc -b && vitest run && vite build"
+    "check": "prettier --check . && eslint . && tsc -b && vitest run && vite build",
+    "dev:local": "firebase emulators:exec --project demo-studyflow --only auth,firestore --ui \"npm run dev:emulator\"",
+    "test:unit": "vitest run",
+    "test:rules:run": "vitest run --config vitest.rules.config.ts",
+    "test:integration:run": "vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {
     "firebase": "13.0.0",
+    "pdfjs-dist": "6.4.299",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "react-router": "8.4.0"

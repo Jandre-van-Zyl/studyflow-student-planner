@@ -10,6 +10,9 @@ import { SubjectsPage } from '@/features/subjects/SubjectsPage';
 import { AppShell } from '@/shared/components/AppShell';
 import { PlanningWorkspace } from '@/features/planner/PlanningWorkspace';
 import { CtuSyncPage } from '@/features/ctu/CtuSyncPage';
+import { ClassActivitiesPage } from '@/features/activities/ClassActivitiesPage';
+import { StudySetup } from '@/features/settings/StudySetup';
+import { GradeBookPage } from '@/features/grades/GradeBookPage';
 
 export function App() {
   return (
@@ -23,8 +26,11 @@ export function App() {
               <Route path="dashboard" element={<DashboardPage />} />
               <Route path="subjects" element={<SubjectsPage />} />
               <Route path="assessments" element={<AssessmentsPage />} />
+              <Route path="class-activities" element={<ClassActivitiesPage />} />
               <Route path="planner" element={<PlannerPage />} />
               <Route path="settings" element={<SettingsPage />} />
+              <Route path="study-setup" element={<StudySetup />} />
+              <Route path="grades" element={<GradeBookPage />} />
               {import.meta.env.VITE_CTU_PROTOTYPE === 'true' && (
                 <Route path="ctu-sync" element={<CtuSyncPage />} />
               )}

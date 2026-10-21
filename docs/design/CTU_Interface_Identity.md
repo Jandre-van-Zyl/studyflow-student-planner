@@ -1,5 +1,7 @@
 # CTU student interface identity
 
+Current override, 21 October 2026: the official CTU logo, observed burgundy/navy/cyan website palette and system sans-serif headings now replace the historical no-logo/teal/Georgia description below. See [brand reference](CTU_Brand_Reference.md), [review](../reviews/StudyFlow_Review_2026-10-21.md) and [onboarding verification](../testing/Onboarding_and_Readability_2026-10-21.md). Earlier sections are dated history.
+
 Implemented19October2026 at `0032c5b`, following Jandre's request for a CTU-focused planner and the selected verified-email/team-approved-list admission model.
 
 The working product name remains StudyFlow. The shared brand now adds “CTU student planner”; every route title ends “StudyFlow for CTU”. Account copy explicitly covers CTU modules, deadlines, study time and approved student email. The footer identifies Group1's capstone context. HTML metadata carries the same identity.

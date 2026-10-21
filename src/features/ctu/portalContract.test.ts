@@ -13,6 +13,19 @@ const home = () =>
     `<nav><a href="student-home.php">Home</a></nav><div>Hello Example Student!</div><p>The following assessments are due in 30 days</p><table><tr><th>Module</th><th>Assessment</th><th>Due</th></tr><tr><td>KM-03 Database - MDB622</td><td>FA1</td><td>2026-10-21</td></tr><tr><td>PM-02 Database - MDB622</td><td>Project</td><td>2026-10-24</td></tr></table>`,
   );
 describe('CTU preview boundary', () => {
+  it('preserves distinct source IDs with identical titles and rejects ambiguous source-less joins', () => {
+    const page = home();
+    page.kind = 'uploads';
+    const base = page.assessments[0]!;
+    page.assessments = [
+      { ...base, sourceId: '123', submitted: false },
+      { ...base, sourceId: '456', submitted: true },
+    ];
+    const result = combinePortalPages([page]);
+    expect(result.assessments.map((a) => a.sourceId)).toEqual(['123', '456']);
+    expect(result.assessments.map((a) => a.submitted)).toEqual([false, true]);
+    expect(() => combinePortalPages([home(), page])).toThrow(/same title/);
+  });
   it('captures only relevant fields, excluding credentials, grades and submitted-file links', () => {
     const page = capture(
       'student-uploads.php',

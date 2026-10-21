@@ -34,6 +34,11 @@ export function importFixture() {
 }
 
 describe('persisted CTU source boundary', () => {
+  it('rejects a missing course before changing durable IDs or connection context', async () => {
+    await expect(prepareCtuImport({ ...importFixture(), course: '' })).rejects.toThrow(
+      /course information/,
+    );
+  });
   it('uses repeatable IDs and keeps distinct modules and missing time/effort', async () => {
     const first = await prepareCtuImport(importFixture());
     expect(first).toEqual(await prepareCtuImport(importFixture()));

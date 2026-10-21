@@ -5,6 +5,12 @@ import { describe, expect, it } from 'vitest';
 import { authFixture, profileFixture } from '@/test/accountFixtures';
 import { AuthContext, type SessionStatus } from './authContext';
 import { AuthGate } from './AuthGate';
+import { Timestamp } from 'firebase/firestore';
+
+function configuredProfile(name = 'Student') {
+  const profile = profileFixture(name);
+  return { ...profile, updatedAt: Timestamp.fromMillis(profile.createdAt.toMillis() + 1000) };
+}
 
 describe('private route boundary', () => {
   it('unmounts arbitrary private feature state when the UID changes directly', () => {
@@ -25,7 +31,7 @@ describe('private route boundary', () => {
             value={authFixture({
               status: 'ready',
               user: { uid, email: uid + '@example.test', emailVerified: true },
-              profile: profileFixture(uid),
+              profile: configuredProfile(uid),
             })}
           >
             <Routes>
@@ -54,7 +60,7 @@ describe('private route boundary', () => {
               status === 'ready'
                 ? { uid: 'a', email: 'a@example.test', emailVerified: true }
                 : null,
-            profile: status === 'ready' ? profileFixture() : null,
+            profile: status === 'ready' ? configuredProfile() : null,
           })}
         >
           <Routes>
