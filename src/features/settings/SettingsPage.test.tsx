@@ -46,7 +46,7 @@ describe('settings editing', () => {
     change('Monday (minutes)', '1440');
     fireEvent.click(screen.getByRole('button', { name: 'Save profile' }));
     expect(await screen.findByRole('status')).toHaveTextContent('saved');
-    expect(screen.getByRole('status')).toHaveFocus();
+    await waitFor(() => expect(screen.getByRole('status')).toHaveFocus());
     expect(saveProfile).toHaveBeenCalledWith(
       'a',
       {

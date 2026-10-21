@@ -167,13 +167,13 @@ describe('explained assessment ordering', () => {
     data.assessments[0]!.dueAt = '2026-10-23T12:00:00+02:00';
     data.assessments[1]!.dueAt = '2026-10-18T12:00:00+02:00';
     expect(rankedAssessments(data, now).map((r) => r.item.id)).toEqual(['quiz', 'requirements']);
-    expect(rankedAssessments(data, now)[0]!.reason).toBe('Overdue · medium priority');
+    expect(rankedAssessments(data, now)[0]!.reason).toBe('Overdue - medium priority');
     data.assessments[1]!.archived = true;
     expect(rankedAssessments(data, now)).toHaveLength(1);
   });
   it.each([
     [24, '24 hours'],
-    [72, '3 days'],
+    [72, '72 hours'],
     [168, '7 days'],
     [169, 'later'],
   ])('uses the published %i hour boundary', (hours, phrase) => {

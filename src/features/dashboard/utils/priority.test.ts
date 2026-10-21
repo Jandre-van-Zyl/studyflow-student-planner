@@ -96,7 +96,7 @@ describe('FR-11 Next-Task Recommendation Engine', () => {
     expect(results[0]?.isQuickTask).toBe(false);
   });
 
-  it('TC-26: sorts by shorter effort, then assessment ID for equal deadlines and priorities', () => {
+  it('TC-23: sorts by shorter effort, then assessment ID for equal deadlines and priorities', () => {
     const dueAt = new Date(now.getTime() + 12 * 60 * 60 * 1000);
     const items = [
       makeAssessment({ id: 'z', dueAt, remainingMinutes: 15 }),
@@ -113,7 +113,7 @@ describe('FR-11 Next-Task Recommendation Engine', () => {
     ).toEqual(expected);
   });
 
-  it('TC-27: earlier exact deadline wins before effort when bucket and priority match', () => {
+  it('TC-23: earlier exact deadline wins before effort when bucket and priority match', () => {
     const results = getRecommendedTasks(
       [
         makeAssessment({
@@ -133,7 +133,7 @@ describe('FR-11 Next-Task Recommendation Engine', () => {
     expect(results.map((task) => task.assessment.id)).toEqual(['earlier-long', 'later-short']);
   });
 
-  it('TC-28: includes urgency and priority in the explanation', () => {
+  it('FR-11: includes urgency and priority in the explanation', () => {
     const [task] = getRecommendedTasks([makeAssessment({ id: 'urgent', priority: 'High' })], now);
 
     expect(task?.explanation).toBe('Due within 24 hours - high priority');

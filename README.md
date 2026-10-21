@@ -2,6 +2,8 @@
 
 Software Engineering 2 capstone, Group 1, CTU Training Solutions.
 
+**Local integration candidate, 21 October 2026.** Jandre's account/admission and CTU interface work is combined with Aneesah's corrected recommendation/workload utilities. Dashboard and planner calculations now share those helpers, with SAST date adapters and a Quick task label. Read the [integration handoff](docs/development/DASHBOARD_INTEGRATION.md). This candidate has not been pushed to Main or published through Hosting; the dated paragraphs below record earlier checkpoints.
+
 **Persistent planner, 16 October 2026.** Signed-in accounts now save subjects, recurring classes, assessments and study blocks to private Firebase collections. The dashboard uses those live records and saved profile budgets. Disabled mode retains the explicitly labelled session preview and synthetic example week. Read the [planner handoff](docs/development/PLANNER_HANDOFF.md), [data contract](docs/design/Planner_Data_Contract.md) and [verification/security record](docs/testing/Planner_Persistence_Verification_2026-10-16.md). The paper/navy/teal interface and CSS motion remain. Work is local on jandre; no Main merge, cloud deployment or completed-capstone claim.
 
 ## Start here

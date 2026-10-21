@@ -6,6 +6,8 @@ import type {
   StudyBudgetMinutes,
 } from '@/shared/types/planner';
 import type { Timestamp } from 'firebase/firestore';
+import { getRecommendedTasks } from '@/features/dashboard/utils/priority';
+import { calculateDailyAllocation } from '@/features/dashboard/utils/workload';
 
 // UI adapters keep date strings separate from persisted Firebase Timestamp contracts.
 type LocalRecord<T> = Omit<T, 'createdAt' | 'updatedAt'> & { id: string; revision?: Timestamp };
@@ -152,9 +154,14 @@ export function validateBlock(block: ViewBlock) {
   return null;
 }
 export function allocation(data: PlanningView, day: string) {
-  return data.blocks
-    .filter((block) => block.startAt.slice(0, 10) === day && block.status !== 'Cancelled')
-    .reduce((sum, block) => sum + duration(block.startAt, block.endAt), 0);
+  return calculateDailyAllocation(
+    data.blocks.map((block) => ({
+      ...block,
+      startAt: new Date(block.startAt),
+      endAt: new Date(block.endAt),
+    })),
+    new Date(day + 'T00:00:00+02:00'),
+  );
 }
 export function completion(data: PlanningView) {
   const items = data.assessments.filter((item) => !item.archived);
@@ -169,35 +176,16 @@ export function completion(data: PlanningView) {
   };
 }
 export function rankedAssessments(data: PlanningView, now = Date.now()) {
-  function bucket(item: ViewAssessment) {
-    const hours = (Date.parse(item.dueAt) - now) / 3600000;
-    return hours < 0 ? 0 : hours <= 24 ? 1 : hours <= 72 ? 2 : hours <= 168 ? 3 : 4;
-  }
-  const priorities = { High: 0, Medium: 1, Low: 2 };
-  return data.assessments
-    .filter((a) => !a.archived && a.status !== 'Completed')
-    .sort(
-      (a, b) =>
-        bucket(a) - bucket(b) ||
-        priorities[a.priority] - priorities[b.priority] ||
-        a.dueAt.localeCompare(b.dueAt) ||
-        a.remainingMinutes - b.remainingMinutes ||
-        a.id.localeCompare(b.id),
-    )
-    .map((item) => ({
-      item,
-      reason:
-        [
-          'Overdue',
-          'Due within 24 hours',
-          'Due within 3 days',
-          'Due within 7 days',
-          'Due later than 7 days',
-        ][bucket(item)] +
-        ' · ' +
-        item.priority.toLowerCase() +
-        ' priority',
-    }));
+  const sourceById = new Map(data.assessments.map((item) => [item.id, item]));
+  return getRecommendedTasks(
+    data.assessments.map((item) => ({ ...item, dueAt: new Date(item.dueAt) })),
+    new Date(now),
+  ).map(({ assessment, explanation, isQuickTask }) => ({
+    // Collection IDs are unique; keep the original SAST strings and revision metadata.
+    item: sourceById.get(assessment.id)!,
+    reason: explanation,
+    isQuickTask,
+  }));
 }
 export function exampleView(): PlanningView {
   return {

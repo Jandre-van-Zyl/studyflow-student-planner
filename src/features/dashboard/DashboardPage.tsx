@@ -12,6 +12,7 @@ import {
 } from '@/features/planner/planningView';
 import { SubjectLabel, WeekControls } from '@/shared/components/PlanningUI';
 import { useCurrentTime } from '@/shared/hooks/useCurrentTime';
+import { getWorkloadSummary } from './utils/workload';
 
 export function DashboardPage() {
   const now = useCurrentTime();
@@ -19,8 +20,12 @@ export function DashboardPage() {
   const { profile } = useAuth();
   const agenda = agendaForDay(data, day);
   const progress = completion(data);
-  const used = allocation(data, day);
-  const budget = budgets[weekday(day)];
+  const {
+    allocatedMinutes: used,
+    budgetMinutes: budget,
+    isOverloaded,
+    excessMinutes,
+  } = getWorkloadSummary(allocation(data, day), budgets[weekday(day)]);
   const scale = Math.max(used, budget, 1);
   const suggestion = rankedAssessments(data, now)[0];
   const next = data.assessments
@@ -138,7 +143,7 @@ export function DashboardPage() {
               aria-label={`${used} minutes reserved against a ${budget} minute budget`}
             >
               <div
-                className={`data-fill h-full rounded-sm ${used > budget ? 'bg-[#805600]' : 'bg-accent'}`}
+                className={`data-fill h-full rounded-sm ${isOverloaded ? 'bg-[#805600]' : 'bg-accent'}`}
                 style={{ width: `${(used / scale) * 100}%` }}
               />
               <span
@@ -147,9 +152,9 @@ export function DashboardPage() {
                 aria-hidden="true"
               />
             </div>
-            <p className={`text-sm ${used > budget ? 'font-semibold text-warning' : 'text-muted'}`}>
-              {used > budget
-                ? `${used - budget} min over budget. Move a block or adjust your budget.`
+            <p className={`text-sm ${isOverloaded ? 'font-semibold text-warning' : 'text-muted'}`}>
+              {isOverloaded
+                ? `${excessMinutes} min over budget. Move a block or adjust your budget.`
                 : `${budget - used} min available for study.`}
             </p>
             <p className="help mt-2">
@@ -165,8 +170,9 @@ export function DashboardPage() {
             <h2>Where to start</h2>
             {suggestion ? (
               <>
-                <div className="mt-4">
+                <div className="mt-4 flex flex-wrap items-center gap-3">
                   <SubjectLabel id={suggestion.item.subjectId} />
+                  {suggestion.isQuickTask && <span className="badge">Quick task</span>}
                 </div>
                 <h3 className="mt-2 text-lg">{suggestion.item.title}</h3>
                 <p className="mt-2 text-sm text-muted">{suggestion.reason}</p>

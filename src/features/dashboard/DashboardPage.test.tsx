@@ -73,7 +73,7 @@ describe('integrated dashboard recommendations and workload', () => {
     );
   });
 
-  it('does not label a higher-priority long task as quick, and updates recommendations on data changes', () => {
+  it('does not label a higher-priority long task as quick', () => {
     const data = exampleView();
     const source = data.assessments[0]!;
     data.assessments = [
