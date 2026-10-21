@@ -11,6 +11,9 @@ const navigation: { to: string; label: string; icon: IconName }[] = [
   { to: '/planner', label: 'Weekly planner', icon: 'planner' },
   { to: '/account', label: 'Account', icon: 'account' },
   { to: '/settings', label: 'Settings', icon: 'settings' },
+  ...(import.meta.env.VITE_CTU_PROTOTYPE === 'true'
+    ? [{ to: '/ctu-sync', label: 'Connect CTU', icon: 'settings' as const }]
+    : []),
 ];
 
 export function AppShell() {

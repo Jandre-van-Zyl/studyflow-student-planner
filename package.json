@@ -16,6 +16,8 @@
     "demo:approve": "node scripts/local-student-access.mjs",
     "build": "tsc -b && vite build",
     "build:cloud": "tsc -b && vite build --mode cloud",
+    "build:ctu-helper": "tsc -p tsconfig.ctu-extension.json && node scripts/build-ctu-extension.mjs",
+    "prototype:ctu": "npm run build:ctu-helper && npm run build:cloud && npm run preview:cloud -- --open /ctu-sync",
     "preview": "vite preview --host 127.0.0.1 --port 4173 --strictPort",
     "preview:cloud": "vite preview --mode cloud --host 127.0.0.1 --port 4173 --strictPort",
     "typecheck": "tsc -b",

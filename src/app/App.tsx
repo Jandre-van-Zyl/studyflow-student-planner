@@ -9,6 +9,7 @@ import { SettingsPage } from '@/features/settings/SettingsPage';
 import { SubjectsPage } from '@/features/subjects/SubjectsPage';
 import { AppShell } from '@/shared/components/AppShell';
 import { PlanningWorkspace } from '@/features/planner/PlanningWorkspace';
+import { CtuSyncPage } from '@/features/ctu/CtuSyncPage';
 
 export function App() {
   return (
@@ -24,6 +25,9 @@ export function App() {
               <Route path="assessments" element={<AssessmentsPage />} />
               <Route path="planner" element={<PlannerPage />} />
               <Route path="settings" element={<SettingsPage />} />
+              {import.meta.env.VITE_CTU_PROTOTYPE === 'true' && (
+                <Route path="ctu-sync" element={<CtuSyncPage />} />
+              )}
             </Route>
           </Route>
           <Route

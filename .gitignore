@@ -2,6 +2,7 @@
 node_modules/
 dist/
 dist-cloud/
+extension-dist/
 dist-ssr/
 coverage/
 .vite/
