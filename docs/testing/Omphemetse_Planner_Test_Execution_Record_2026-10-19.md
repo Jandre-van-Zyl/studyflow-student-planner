@@ -72,3 +72,41 @@ No screenshots or console logs are attached to this record. Add an evidence path
 These results confirm only the specific scenarios described above. The separate scenario in which a class ends at 10:00 and a study block starts at 10:00 has not been tested. Therefore, these results do not establish that the entire TC-22 test case has passed.
 
 No screenshots or other supporting evidence were captured for these additional manual tests.
+
+## OMP-PL-06 — Class-Boundary Test
+
+**Test date:** 26 October 2026
+**Feature:** Planner — class and study-block scheduling
+**Status:** PASS
+
+### Objective
+
+Verify that a study block can start exactly when a scheduled class ends without triggering an incorrect class-overlap warning.
+
+### Test data
+
+| Field            | Value                     |
+| ---------------- | ------------------------- |
+| Subject          | 422 · Mathematics         |
+| Class date       | Monday, 26 October 2026   |
+| Class time       | 09:00–10:00 SAST          |
+| Assessment       | Boundary Test Assessment  |
+| Study block      | Class Boundary Test Block |
+| Study-block time | 10:00–11:00 SAST          |
+
+### Expected result
+
+The application should allow the study block because it begins at the exact time the class ends. The two intervals do not overlap.
+
+### Actual result
+
+The study block saved successfully without an overlap warning. Both the Mathematics class and the study block were visible in the Planner at their correct times.
+
+### Evidence
+
+*Screenshot: `../evidence/OMP-PL-06_Class-Boundary_PASS_2026-10-26.png`Select-String -Path "
+* The screenshot was captured from the running application and saved in the project's testing evidence folder.
+
+### Limitations
+
+This test verifies only the case where a study block starts exactly when a class ends. It does not establish that all class-overlap scenarios pass. The result was observed in the application; automated test coverage was not established by this manual test.git diff --check
