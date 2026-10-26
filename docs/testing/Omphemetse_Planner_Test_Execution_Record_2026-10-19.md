@@ -110,3 +110,40 @@ The study block saved successfully without an overlap warning. Both the Mathemat
 ### Limitations
 
 This test verifies only the case where a study block starts exactly when a class ends. It does not establish that all class-overlap scenarios pass. The result was observed in the application; automated test coverage was not established by this manual test.git diff --check
+
+## OMP-PL-07 — Class Overlap Confirmation and Retest
+
+**Test date:** 26 October 2026
+**Tester:** Omphemetse Dikeledi
+**Test type:** Manual functional retest
+**Result:** PASS on retest; intermittent freeze observed during the initial attempt.
+
+### Test setup
+
+* Subject: `422 · Mathematics`
+* Class: Monday, 26 October 2026, 09:00–10:00 SAST
+* Class active dates: 26–30 October 2026
+* Assessment: `Boundary Test Assessment`
+* Study block: `Class Overlap Test Block`
+* Study block time: Monday, 26 October 2026, 09:30–10:30 SAST
+
+### Procedure and observations
+
+1. Created a study block that overlapped the Mathematics class.
+2. Selected Save and verified that the warning identified the Mathematics class.
+3. Selected Cancel during the initial attempt. The warning closed and the block was not saved.
+4. Repeated the test and selected Confirm Anyway. During the initial confirmation attempt, the application froze and the warning buttons became unresponsive.
+5. Restarted the local development environment. The Firebase Emulator's authentication and Firestore data were empty after the restart, so the test account and test data had to be recreated.
+6. Repeated the overlap test using the recreated test data. The warning again identified the Mathematics class.
+7. Selected Confirm Anyway. The study block saved successfully, and StudyFlow remained responsive.
+8. Verified in the Planner that the study block appeared at 09:30–10:30, overlapping the class at 09:00–10:00.
+
+### Evidence
+
+* Screenshot: `../evidence/OMP-PL-07_Class-Overlap-Confirmation-RETEST_2026-10-26.png`
+
+### Conclusion
+
+The class-overlap warning correctly identified the conflicting class. Cancelling prevented the initial save, while confirming allowed the overlapping study block to be saved successfully during the retest. However, the application froze during the initial confirmation attempt. Because the freeze was not reproduced during the retest, the behaviour should be treated as an intermittent issue requiring further investigation, not as a confirmed fix.
+
+**Limitation:** This is a manual observation from the local emulator environment. It does not establish automated test coverage or prove that the intermittent freeze has been resolved.
