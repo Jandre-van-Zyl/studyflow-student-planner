@@ -12,6 +12,7 @@ import { getFirebaseServices } from '@/lib/firebase/client';
 import { parsePortalSnapshot } from './portalContract';
 import { refreshCtuPlans } from './ctuPlanningService';
 import { parseCtuPlannerLink } from './ctuPlanningContract';
+import { reconcileCtuImport } from './ctuImportIdentity';
 import {
   ctuInput,
   EMPTY_CTU,
@@ -28,7 +29,7 @@ function owner(uid: string, signal?: AbortSignal) {
   return services;
 }
 export function ctuSaveErrorMessage(error: unknown) {
-  if (error instanceof Error && error.message.startsWith('CTU changed a source identifier.'))
+  if (error instanceof Error && error.message.startsWith('CTU source references are ambiguous'))
     return error.message;
   return 'CTU information was collected but the source and planner update were not fully confirmed. Retry saving while signed into this account.';
 }
@@ -47,7 +48,7 @@ async function saveCtuImportAttempt(
   attempt: number,
 ): Promise<{ added: number; updated: number; unchanged: number }> {
   const snapshot = parsePortalSnapshot(value);
-  const rows = await prepareCtuImport(snapshot);
+  const incoming = await prepareCtuImport(snapshot);
   const { database, auth } = owner(uid, signal);
   const session = auth.currentUser;
   const check = () => {
@@ -61,24 +62,7 @@ async function saveCtuImportAttempt(
   const known = await getDocsFromServer(collection(database, 'users', uid, 'ctuItems'));
   check();
   const previousItems = known.docs.map((d) => parseCtuItem(d.id, d.data()));
-  for (const row of rows) {
-    if (
-      [...previousItems, ...rows].some(
-        (old) =>
-          old.id !== row.id &&
-          old.kind === row.kind &&
-          old.portalName === row.portalName &&
-          old.course === row.course &&
-          old.module === row.module &&
-          old.title === row.title &&
-          (!old.sourceId || !row.sourceId) &&
-          old.url === row.url,
-      )
-    )
-      throw new Error(
-        `CTU changed a source identifier. ${row.kind}: “${row.title}” (${row.sourceId ? 'new reference supplied' : 'reference not supplied'}). The existing item was kept; this sync needs reconciliation before saving to avoid a duplicate.`,
-      );
-  }
+  const rows = reconcileCtuImport(incoming, previousItems);
   let result;
   try {
     result = await runTransaction(database, async (tx) => {

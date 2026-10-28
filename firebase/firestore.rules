@@ -178,7 +178,10 @@ service cloud.firestore {
       allow update: if plannerOwner(uid) && ctuItemSchema(request.resource.data) && savedMetadata(request.resource.data)
         && request.resource.data.kind == resource.data.kind && request.resource.data.portalName == resource.data.portalName
         && request.resource.data.course == resource.data.course && request.resource.data.module == resource.data.module
-        && request.resource.data.sourceId == resource.data.sourceId
+        && (request.resource.data.sourceId == resource.data.sourceId
+          || (resource.data.sourceId == '' && request.resource.data.sourceId != ''
+            && resource.data.kind in ['assessment','module']
+            && request.resource.data.title == resource.data.title && request.resource.data.url == resource.data.url))
         && (request.resource.data.previousDue == resource.data.previousDue || request.resource.data.previousDue == resource.data.dueDate + (resource.data.dueTime == '' ? '' : 'T' + resource.data.dueTime));
       allow delete: if false;
     }

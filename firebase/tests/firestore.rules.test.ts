@@ -755,6 +755,55 @@ function ctuItemData() {
   };
 }
 describe('CTU source rules', () => {
+  it('allows one-way owner reference enrichment while retaining the original source document', async () => {
+    await seed();
+    const ref = doc(owner(), `users/student-a/ctuItems/${'e'.repeat(64)}`);
+    await setDoc(ref, { ...ctuItemData(), sourceId: '' });
+    const original = (await getDoc(ref)).data()!;
+    await assertSucceeds(
+      updateDoc(ref, { sourceId: '12', dueTime: '12:30', updatedAt: serverTimestamp() }),
+    );
+    expect((await getDoc(ref)).data()).toMatchObject({
+      sourceId: '12',
+      createdAt: original.createdAt,
+    });
+    await assertFails(updateDoc(ref, { sourceId: '13', updatedAt: serverTimestamp() }));
+    await assertFails(updateDoc(ref, { sourceId: '', updatedAt: serverTimestamp() }));
+  });
+  it('refuses reference adoption that also changes source identity or comes from another account', async () => {
+    await seed();
+    const path = `users/student-a/ctuItems/${'f'.repeat(64)}`;
+    const ref = doc(owner(), path);
+    await setDoc(ref, { ...ctuItemData(), sourceId: '' });
+    for (const field of ['title', 'portalName', 'course', 'module'])
+      await assertFails(
+        updateDoc(ref, { [field]: 'Different', sourceId: '12', updatedAt: serverTimestamp() }),
+      );
+    const foreign = environment
+      .authenticatedContext('student-b', { email: 'student-b@example.test', email_verified: true })
+      .firestore();
+    await assertFails(
+      updateDoc(doc(foreign, path), { sourceId: '12', updatedAt: serverTimestamp() }),
+    );
+  });
+  it('does not add references to resources or bypass revoked student approval', async () => {
+    await seed();
+    const ref = doc(owner(), `users/student-a/ctuItems/${'9'.repeat(64)}`);
+    await setDoc(ref, {
+      ...ctuItemData(),
+      kind: 'resource',
+      sourceId: '',
+      module: '',
+      dueDate: '',
+    });
+    await assertFails(updateDoc(ref, { sourceId: '12', updatedAt: serverTimestamp() }));
+    await environment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'approvedStudents/student-a@example.test'), {
+        active: false,
+      });
+    });
+    await assertFails(updateDoc(ref, { title: 'Changed', updatedAt: serverTimestamp() }));
+  });
   it('validates owner-only planning links and denies redirection, dangling links, forged metadata and deletion', async () => {
     await linkedSeed();
     const id = 'd'.repeat(64);

@@ -522,23 +522,81 @@ describe('real account-scoped CTU import integration', () => {
       saveCtuImport(account.uid, identified),
       saveCtuImport(account.uid, unidentified),
     ]);
-    expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+    expect(results.filter((r) => r.status === 'fulfilled').length).toBeGreaterThanOrEqual(1);
     expect((await readCtu(account.uid)).items.filter((i) => i.kind === 'assessment')).toHaveLength(
       1,
     );
   });
-  it('refuses a changed missing-to-present source ID instead of creating an ambiguous duplicate', async () => {
+  it('adopts one newly supplied reference without changing the saved record, completion or links', async () => {
+    const account = await createAccount();
+    await ensureProfile(account.uid, 'Synthetic Student');
+    const snapshot = ctuFixture();
+    snapshot.assessments[0]!.sourceId = null;
+    snapshot.assessments[0]!.submitted = true;
+    await saveCtuImport(account.uid, snapshot);
+    const original = (await readCtu(account.uid)).items.find((i) => i.kind === 'assessment')!;
+    const taskId = await planCtuAssessment(account.uid, original.id, {
+      subjectId: '',
+      type: 'Assignment',
+      priority: 'Medium',
+      remainingMinutes: 0,
+      planningTime: '18:00',
+      completed: true,
+    });
+    const taskRef = doc(live.database, 'users', account.uid, 'assessments', taskId);
+    const completedAt = (await getDocFromServer(taskRef)).data()!.completedAt;
+    snapshot.capturedAt = new Date().toISOString();
+    snapshot.assessments[0]!.sourceId = '12';
+    expect(await saveCtuImport(account.uid, snapshot)).toMatchObject({ added: 0, updated: 1 });
+    snapshot.capturedAt = new Date().toISOString();
+    snapshot.assessments[0]!.title = 'FA1 renamed by CTU';
+    snapshot.assessments[0]!.due = '2026-10-30T23:30';
+    await saveCtuImport(account.uid, snapshot);
+    await saveCtuImport(account.uid, snapshot);
+    const saved = await readCtu(account.uid);
+    expect(saved.items.filter((i) => i.kind === 'assessment')).toHaveLength(1);
+    expect(saved.items.find((i) => i.kind === 'assessment')).toMatchObject({
+      id: original.id,
+      sourceId: '12',
+      title: 'FA1 renamed by CTU',
+      dueDate: '2026-10-30',
+    });
+    expect(saved.links).toHaveLength(1);
+    expect(saved.links![0]!.assessmentId).toBe(taskId);
+    expect((await observePlanner(account.uid)).assessments).toHaveLength(1);
+    expect((await getDocFromServer(taskRef)).data()).toMatchObject({
+      status: 'Completed',
+      remainingMinutes: 0,
+      completedAt,
+    });
+  });
+  it('retains the known reference when a later collection omits it', async () => {
+    const account = await createAccount();
+    await ensureProfile(account.uid, 'Synthetic Student');
+    const snapshot = ctuFixture();
+    await saveCtuImport(account.uid, snapshot);
+    const original = (await readCtu(account.uid)).items.find((i) => i.kind === 'assessment')!;
+    snapshot.capturedAt = new Date().toISOString();
+    snapshot.assessments[0]!.sourceId = null;
+    snapshot.assessments[0]!.due = '2026-10-30T23:30';
+    expect(await saveCtuImport(account.uid, snapshot)).toMatchObject({ added: 0, updated: 1 });
+    const items = (await readCtu(account.uid)).items.filter((i) => i.kind === 'assessment');
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({ id: original.id, sourceId: '12', dueDate: '2026-10-30' });
+  });
+  it('refuses an ambiguous legacy reference upgrade before writing any source records', async () => {
     const account = await createAccount();
     await ensureProfile(account.uid, 'Synthetic Student');
     const snapshot = ctuFixture();
     snapshot.assessments[0]!.sourceId = null;
     await saveCtuImport(account.uid, snapshot);
+    const original = (await readCtu(account.uid)).items.find((i) => i.kind === 'assessment')!;
     snapshot.capturedAt = new Date().toISOString();
     snapshot.assessments[0]!.sourceId = '12';
-    await expect(saveCtuImport(account.uid, snapshot)).rejects.toThrow(/source identifier/);
-    expect((await readCtu(account.uid)).items.filter((i) => i.kind === 'assessment')).toHaveLength(
-      1,
-    );
+    snapshot.assessments.push({ ...snapshot.assessments[0]!, sourceId: '13' });
+    await expect(saveCtuImport(account.uid, snapshot)).rejects.toThrow(/ambiguous/);
+    const saved = await readCtu(account.uid);
+    expect(saved.items.filter((i) => i.kind === 'assessment')).toEqual([original]);
   });
   it('turns a source into one schedulable assessment, persists through sign-in, and resyncs without resetting student work', async () => {
     const account = await createAccount();
