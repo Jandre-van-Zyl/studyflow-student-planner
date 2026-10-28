@@ -19,6 +19,7 @@ function StudySetupForm({ uid, profile }: { uid: string; profile: UserProfile })
   const [budgets, setBudgets] = useState<StudyBudgetMinutes>({ ...profile.studyBudgetMinutes });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [deferring, setDeferring] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null);
   const active = useRef(true);
   const locked = useRef(false);
@@ -42,15 +43,19 @@ function StudySetupForm({ uid, profile }: { uid: string; profile: UserProfile })
     setBudgets({ ...profile.studyBudgetMinutes });
     setError('');
   }
-  async function finish() {
+  async function finish(later = false) {
     if (locked.current || hasRemoteChanges) return;
     locked.current = true;
     setBusy(true);
+    setDeferring(later);
     setError('');
     try {
       await saveProfile(
         uid,
-        { displayName: base.displayName, studyBudgetMinutes: budgets },
+        {
+          displayName: base.displayName,
+          studyBudgetMinutes: later ? base.studyBudgetMinutes : budgets,
+        },
         base.updatedAt,
       );
       if (active.current) navigate('/dashboard', { replace: true });
@@ -99,6 +104,7 @@ function StudySetupForm({ uid, profile }: { uid: string; profile: UserProfile })
                   className="h-5 min-h-0 w-5"
                   type="checkbox"
                   checked={budgets[key] > 0}
+                  disabled={busy}
                   onChange={(event) =>
                     setBudgets({ ...budgets, [key]: event.target.checked ? 60 : 0 })
                   }
@@ -115,6 +121,7 @@ function StudySetupForm({ uid, profile }: { uid: string; profile: UserProfile })
                 {label}
                 <select
                   value={budgets[key]}
+                  disabled={busy}
                   onChange={(event) =>
                     setBudgets({ ...budgets, [key]: Number(event.target.value) })
                   }
@@ -185,10 +192,27 @@ function StudySetupForm({ uid, profile }: { uid: string; profile: UserProfile })
           disabled={busy || (step === 2 && hasRemoteChanges)}
           onClick={() => (step < 2 ? setStep(step + 1) : void finish())}
         >
-          {busy ? 'Saving your routine…' : step === 2 ? 'Save my routine' : 'Continue'}
+          {busy
+            ? deferring
+              ? 'Opening your planner…'
+              : 'Saving your routine…'
+            : step === 2
+              ? 'Save my routine'
+              : 'Continue'}
         </button>
       </div>
-      <p className="help mt-4">Your routine stays private to your StudyFlow account.</p>
+      <div className="mt-6 border-t border-line pt-5">
+        <button
+          type="button"
+          className="text-link"
+          disabled={busy || hasRemoteChanges}
+          onClick={() => void finish(true)}
+        >
+          Do this later
+        </button>
+        <p className="help mt-2">You can set up your routine anytime in Settings.</p>
+        <p className="help mt-4">Your routine stays private to your StudyFlow account.</p>
+      </div>
     </section>
   );
 }

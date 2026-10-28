@@ -13,8 +13,13 @@ import { EMPTY_VIEW, exampleView, type PlanningView } from './planningView';
 import { PlannerError } from './plannerContract';
 import { savePlannerRecord, watchPlanner } from './plannerService';
 import { Timestamp } from 'firebase/firestore';
+import { useState } from 'react';
+import { saveProfile } from '@/features/auth/profileService';
+import { StudySetup } from '@/features/settings/StudySetup';
+import type { UserProfile } from '@/shared/types/planner';
 
 vi.mock('./plannerService', () => ({ savePlannerRecord: vi.fn(), watchPlanner: vi.fn() }));
+vi.mock('@/features/auth/profileService', () => ({ saveProfile: vi.fn() }));
 let observers: {
   uid: string;
   next: (data: PlanningView) => void;
@@ -52,6 +57,7 @@ function tree(auth: AuthContextValue, path = '/dashboard') {
               <Route element={<AuthGate />}>
                 <Route path="dashboard" element={<DashboardPage />} />
                 <Route path="subjects" element={<SubjectsPage />} />
+                <Route path="study-setup" element={<StudySetup />} />
               </Route>
             </Route>
           </Route>
@@ -61,6 +67,62 @@ function tree(auth: AuthContextValue, path = '/dashboard') {
   );
 }
 describe('persistent workspace lifecycle', () => {
+  it('retains a running timer when an existing student revisits the routine from Settings', () => {
+    render(tree(context('returning-student'), '/study-setup'));
+    expect(document.title).toBe('Your study routine · StudyFlow for CTU');
+    expect(screen.getByRole('navigation', { name: 'Main navigation' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Study timer/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start' }));
+    fireEvent.click(screen.getByRole('link', { name: 'Subjects' }));
+    act(() => observers[0]!.next(EMPTY_VIEW));
+    expect(screen.getByRole('button', { name: 'Pause' })).toBeVisible();
+    expect(watchPlanner).toHaveBeenCalledTimes(1);
+  });
+  it('opens the dashboard after deferring and does not ask again after remount', async () => {
+    const initial = { ...context('new-student'), profile: profileFixture('New student') };
+    let acceptProfile: (profile: UserProfile) => void = () => {};
+    let confirmed: UserProfile | null = null;
+    function NewStudent() {
+      const [auth, setAuth] = useState(initial);
+      acceptProfile = (profile) => setAuth({ ...initial, profile });
+      return tree(auth, '/account');
+    }
+    const view = render(<NewStudent />);
+    vi.mocked(saveProfile).mockImplementation(async () => {
+      confirmed = {
+        ...initial.profile,
+        updatedAt: Timestamp.fromMillis(initial.profile.createdAt.toMillis() + 1000),
+      };
+      acceptProfile(confirmed);
+      return confirmed;
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Do this later' }));
+    await waitFor(() => expect(watchPlanner).toHaveBeenCalled());
+    act(() => observers[0]!.next(EMPTY_VIEW));
+    expect(await screen.findByRole('heading', { name: 'This week' })).toBeVisible();
+    view.unmount();
+    render(tree({ ...initial, profile: confirmed }, '/subjects'));
+    act(() => observers[1]!.next(EMPTY_VIEW));
+    expect(screen.getByRole('heading', { name: 'Subjects & classes' })).toBeVisible();
+    expect(screen.queryByText('When does studying fit your week?')).not.toBeInTheDocument();
+  });
+  it.each(['/dashboard', '/subjects', '/account'])(
+    'opens untouched accounts in standalone onboarding at %s before mounting the planner',
+    (path) => {
+      render(tree({ ...context('new-student'), profile: profileFixture('New student') }, path));
+      expect(
+        screen.getByRole('heading', { name: 'When does studying fit your week?' }),
+      ).toBeVisible();
+      expect(screen.getByRole('button', { name: 'Do this later' })).toBeEnabled();
+      expect(screen.queryByRole('navigation', { name: 'Main navigation' })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', { name: 'StudyFlow for CTU home' }),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('View planner date')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Study timer/ })).not.toBeInTheDocument();
+      expect(watchPlanner).not.toHaveBeenCalled();
+    },
+  );
   it('discards old planner records immediately when UID changes', () => {
     const view = render(tree(context('a')));
     act(() => observers[0]!.next(exampleView()));

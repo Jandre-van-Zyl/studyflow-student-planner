@@ -83,3 +83,13 @@ Before the presentation on **29 October**, Jandre and Dewald should use the same
 5. Dewald assembles the official six-chapter dissertation, required workbooks, slides/video and signed member forms, verifies the lecturer's time/upload instructions, and submits. Code checks do not replace signatures, consent, attendance, participant evidence or actual submission.
 
 Automatic timetable extraction, portal SSO/API integration and automatic grade-PDF downloads remain outside implemented scope. Resource links are shown, not parsed into guessed class times. The existing manual grade report import remains the reliable route for results; pending/completed historical modules stay out of the planner.
+
+## Standalone first-account routine follow-up
+
+New approved accounts now enter `/study-setup` before the normal workspace mounts. The screen contains the CTU branding and routine controls, with no navigation, planner date, timer or other app actions. Students can finish the three steps or choose **Do this later**. Either choice must be confirmed by the existing revision-aware profile save before opening the dashboard. Deferring retains the saved budgets and discards unfinished choices; the profile revision remembers that setup was addressed across reload/sign-in without a new database field or rule change.
+
+The routine remains accessible through Settings. Existing students revisiting it keep their normal workspace and active timer; first-account isolation does not discard a running session on that existing route. Failed deferral remains on the form with a retryable error. A newer profile revision still requires reloading the latest routine before saving.
+
+Meaningful regressions cover first-account entry through dashboard/subjects/account, absence of app chrome and planner subscriptions, deferral versus an unfinished draft, failed deferral, dashboard transition, remount without a repeat prompt, and a running timer surviving an existing student's routine visit. Browser verification used two disposable local accounts: standalone desktop/phone views, deferral surviving reload, all three completion steps, saved Monday 90-minute budget, and return to the dashboard. See [desktop first-account screen](../evidence/release-2026-10-28/onboarding-standalone-1366.jpg) and [phone screen](../evidence/release-2026-10-28/onboarding-standalone-360.jpg).
+
+Fresh follow-up verification: `npm run check` passed formatting, lint, TypeScript, 293 app tests and production build. `npm test` passed 293 app + 125 rules + 21 integration tests (439 total), and `npm run build:cloud` passed. No cloud data, rules or hosting were changed. Local test services were stopped afterwards.

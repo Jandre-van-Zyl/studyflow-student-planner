@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router';
+import { Navigate, NavLink, Outlet, useLocation } from 'react-router';
 import { useAuth } from '@/features/auth/authContext';
 import { Icon, type IconName } from './Icon';
 import { Modal } from './Modal';
+import { StudySetup } from '@/features/settings/StudySetup';
+import { needsStudySetup } from '@/features/settings/studySetupState';
 
 const navigation: { to: string; label: string; icon: IconName }[] = [
   { to: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
@@ -24,6 +26,11 @@ export function AppShell() {
   const [menuAt, setMenuAt] = useState<string | null>(null);
   const main = useRef<HTMLElement>(null);
   const previousPath = useRef(location.pathname);
+  const standaloneSetup =
+    location.pathname === '/study-setup' &&
+    (location.state as { standaloneStudySetup?: boolean } | null)?.standaloneStudySetup === true;
+  const onboarding =
+    status === 'ready' && !!profile && (needsStudySetup(profile) || standaloneSetup);
   const privateShell = status === 'ready' || status === 'disabled';
   const showMenu = privateShell && menuAt === location.key;
   useEffect(() => {
@@ -33,11 +40,11 @@ export function AppShell() {
       previousPath.current = location.pathname;
     }
     const title =
-      location.pathname === '/study-setup'
+      onboarding || location.pathname === '/study-setup'
         ? 'Your study routine'
         : (navigation.find((item) => item.to === location.pathname)?.label ?? 'Page not found');
     document.title = `${title} · StudyFlow for CTU`;
-  }, [location.pathname]);
+  }, [location.pathname, onboarding]);
   useEffect(() => {
     const query = window.matchMedia?.('(min-width: 1024px)');
     const close = () => {
@@ -74,6 +81,26 @@ export function AppShell() {
       </span>
     </NavLink>
   );
+  if (onboarding && !standaloneSetup)
+    return <Navigate to="/study-setup" replace state={{ standaloneStudySetup: true }} />;
+  if (onboarding)
+    return (
+      <div className="mx-auto min-h-dvh max-w-[704px] px-4 py-6 sm:px-8 sm:py-10">
+        <header className="mb-10 border-b border-line pb-5">
+          <img
+            src="/brand/ctu-logo.svg"
+            alt="CTU Training Solutions"
+            width="250"
+            height="80"
+            className="h-auto w-40"
+          />
+          <p className="mt-2 text-sm font-semibold text-ink">StudyFlow · Your study routine</p>
+        </header>
+        <main ref={main} id="main-content" tabIndex={-1} className="focus:outline-none">
+          <StudySetup key={user?.uid} />
+        </main>
+      </div>
+    );
   return (
     <div
       className={`mx-auto min-h-dvh max-w-[1280px] px-4 sm:px-6 lg:px-8 ${privateShell ? 'lg:grid lg:grid-cols-[224px_minmax(0,1fr)] lg:gap-8' : ''}`}

@@ -25,6 +25,39 @@ beforeEach(() => {
   >);
 });
 describe('study routine onboarding', () => {
+  it('defers setup using the saved budgets without committing an unfinished draft', async () => {
+    const saved = { ...profile, updatedAt: Timestamp.fromMillis(2000) };
+    vi.mocked(saveProfile).mockResolvedValue(saved);
+    render(
+      <MemoryRouter>
+        <StudySetup />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByLabelText('Monday'));
+    fireEvent.click(screen.getByRole('button', { name: 'Do this later' }));
+    await waitFor(() =>
+      expect(saveProfile).toHaveBeenCalledWith(
+        'owner',
+        { displayName: 'Student', studyBudgetMinutes: defaultStudyBudgets() },
+        stamp,
+      ),
+    );
+    expect(needsStudySetup(saved)).toBe(false);
+  });
+  it('keeps onboarding open and permits retry when deferring cannot be saved', async () => {
+    vi.mocked(saveProfile).mockRejectedValue({ code: 'unavailable' });
+    render(
+      <MemoryRouter>
+        <StudySetup />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Do this later' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(/could not be reached/);
+    expect(
+      screen.getByRole('heading', { name: 'When does studying fit your week?' }),
+    ).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Do this later' })).toBeEnabled();
+  });
   it('requires setup only for an untouched zero-budget profile', () => {
     expect(needsStudySetup(profile)).toBe(true);
     expect(needsStudySetup({ ...profile, updatedAt: Timestamp.fromMillis(2000) })).toBe(false);
