@@ -32,7 +32,7 @@ await writeFile(
     {
       manifest_version: 3,
       name: 'StudyFlow CTU Sync',
-      version: '0.1.4',
+      version: '0.1.5',
       description:
         'Reads CTU only when Connect is clicked. StudyFlow saves the collected information to your private planner account.',
       permissions: ['scripting'],

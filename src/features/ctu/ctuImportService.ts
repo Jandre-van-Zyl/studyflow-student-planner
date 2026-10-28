@@ -76,7 +76,7 @@ async function saveCtuImportAttempt(
       )
     )
       throw new Error(
-        'CTU changed a source identifier. The existing item was kept; this sync needs reconciliation before saving to avoid a duplicate.',
+        `CTU changed a source identifier. ${row.kind}: “${row.title}” (${row.sourceId ? 'new reference supplied' : 'reference not supplied'}). The existing item was kept; this sync needs reconciliation before saving to avoid a duplicate.`,
       );
   }
   let result;

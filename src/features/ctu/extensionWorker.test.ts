@@ -79,6 +79,14 @@ beforeEach(async () => {
   await import('../../../extensions/ctu-sync/background');
 });
 describe('packaged CTU worker orchestration with synthetic browser API', () => {
+  it('opens CTU in the foreground immediately so the student can sign in', async () => {
+    const result = await new Promise<unknown>((resolve) => handler(request(), sender, resolve));
+    expect(tabs.create).toHaveBeenCalledWith({
+      url: portal + 'student-home.php',
+      active: true,
+    });
+    expect(result).toMatchObject({ type: 'result' });
+  });
   it('uses the verified content-script sender when Chrome omits an unpermitted tab URL', async () => {
     omitAppUrl = true;
     const response = await new Promise<unknown>((resolve) => handler(request(), sender, resolve));

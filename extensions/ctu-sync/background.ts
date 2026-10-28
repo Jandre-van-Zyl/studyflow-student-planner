@@ -66,7 +66,7 @@ async function collect(appTabId: number, requestId: string) {
   const current = () => active.get(appTabId) === job && !job.cancelled;
   let tabId: number | undefined;
   try {
-    const tab = await chrome.tabs.create({ url: portal + 'student-home.php', active: false });
+    const tab = await chrome.tabs.create({ url: portal + 'student-home.php', active: true });
     tabId = tab.id;
     if (tabId === undefined) throw new Error('Cannot open CTU.');
     await load(tabId, 'student-home.php', current, true);
