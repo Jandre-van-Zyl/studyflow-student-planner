@@ -3,7 +3,7 @@ export function SuccessCheck({ children }: { children: React.ReactNode }) {
     <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#17613b]">
       <svg
         aria-hidden="true"
-        className="h-5 w-5 shrink-0"
+        className="success-check h-5 w-5 shrink-0"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"

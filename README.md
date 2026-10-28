@@ -1,41 +1,25 @@
-# Current team commands — 21 October 2026
+# StudyFlow for CTU
 
-- `npm ci` installs locked dependencies.
-- `npm run dev` opens the local site on4173/account with the real shared Firebase backend. Use your own verified, approved CTU email. Public configuration is included; no Firebase console login is needed.
-- `npm run test` starts isolated local Auth/Java Firestore emulators and runs app, rules and integration tests against demo-studyflow. Java21+ required.
-- `npm run dev:local` is the optional manual emulator app on5173.
+Software Engineering 2 · Group 1 · final release preparation, 28 October 2026.
 
-Read [the simple team testing guide](docs/development/TEAM_TESTING.md) first. The older setup below describes the manual emulator workflow and dated baseline; it is not the current default startup.
+StudyFlow puts subjects, classes, assessments and study time in one private planner. It uses React, TypeScript, Tailwind CSS and Firebase. CTU sync brings observed portal deadlines, modules, upload indicators and resource links into the student's own account. Grade reports remain separate from active planner tasks.
 
----
+## Run the app
 
-# StudyFlow - Student Planner
-
-Software Engineering 2 capstone, Group 1, CTU Training Solutions.
-
-**Local integration candidate, 21 October 2026.** Jandre's account/admission and CTU interface work is combined with Aneesah's corrected recommendation/workload utilities. Dashboard and planner calculations now share those helpers, with SAST date adapters and a Quick task label. Read the [integration handoff](docs/development/DASHBOARD_INTEGRATION.md). This candidate has not been pushed to Main or published through Hosting; the dated paragraphs below record earlier checkpoints.
-
-**Persistent planner, 16 October 2026.** Signed-in accounts now save subjects, recurring classes, assessments and study blocks to private Firebase collections. The dashboard uses those live records and saved profile budgets. Disabled mode retains the explicitly labelled session preview and synthetic example week. Read the [planner handoff](docs/development/PLANNER_HANDOFF.md), [data contract](docs/design/Planner_Data_Contract.md) and [verification/security record](docs/testing/Planner_Persistence_Verification_2026-10-16.md). The paper/navy/teal interface and CSS motion remain. Work is local on jandre; no Main merge, cloud deployment or completed-capstone claim.
-
-## Start here
-
-Install **Node.js 24 LTS, version 24.15 or newer within 24.x**, npm 10 or 11, Git and **Java 21+** for the local backend. Tested runtime: Node 24.19.0, recorded in `.nvmrc`. Node 22 does not meet the selected Firebase SDK's dependency requirements. See [setup and troubleshooting](docs/development/SETUP.md) first if you need to update Node.
-
-Accept your private-repository invitation, then use your **own branch**. Example for Aneesah:
+Use Node 24.15–24.x and npm 10 or 11. The tested version is in `.nvmrc`. No Firebase administrator access or global package installation is needed.
 
 ```powershell
-git clone https://github.com/Jandre-van-Zyl/studyflow-student-planner.git
-cd studyflow-student-planner
-git switch --track origin/aneesah
-git merge origin/Main
 npm ci
-Copy-Item .env.example .env.local
-npm run dev:local
+npm run dev
 ```
 
-`npm run dev:local` starts local Auth/Firestore emulators first, then opens **http://127.0.0.1:5173/account** for login/sign-up. Use a disposable test account; no Firebase cloud account is needed. `npm ci` installs all locked dependencies and tools; no global React, Tailwind, TypeScript, Vite or Firebase install is needed.
+Open **http://127.0.0.1:4173/account**. The website runs locally with the real `studyflow-ctu-capstone` Firebase backend. Register with your own approved CTU email, verify it, return and select **Check access again**. The project owner must add your exact email to the approved list. There is no shared live demo password.
 
-Already cloned and have a clean working tree? Replace `aneesah` below with your branch:
+Checked-in `.env.cloud` contains public browser configuration. Never share private `.env.*.local`, passwords, admin keys or academic PDFs. GitHub membership does not grant Firebase administration. Spark/no billing is the cost constraint. Hosting has not been published.
+
+## Update your branch
+
+Preserve unfinished changes first. Replace `aneesah` with `dewald`, `aneesah`, `riaan`, `jandre` or `omphemetse`.
 
 ```powershell
 git status
@@ -43,115 +27,68 @@ git fetch origin
 git switch aneesah
 git merge origin/Main
 npm ci
-npm run dev:local
+npm run dev
 ```
 
-If your local branch does not exist yet, use `git switch --track origin/aneesah`. Copy `.env.example` only if `.env.local` is missing; preserve existing local values. Commit or safely preserve unfinished work before switching or merging. The owner does not automatically advance your remote personal branch.
+Main is protected; Jandre and Dewald maintain integration. Everyone can pull Main and work on member branches. A Main release does not automatically advance personal branches. Read [team testing and permissions](docs/development/TEAM_TESTING.md).
 
-## Working accounts and settings
-
-Use Java 21+ and one terminal at the repo root:
+## Connect CTU
 
 ```powershell
-npm run dev:local
+npm run build:ctu-helper
 ```
 
-Open http://127.0.0.1:5173/account and register a synthetic test account. Settings saves the display name and all seven daily study budgets. Defaults are zero; choose your own budgets. Sessions survive refresh in the same tab. Sign out when finished. Local accounts/data disappear when the emulators stop.
+Load `extension-dist/ctu-sync` as an unpacked extension in a supported desktop Chromium browser, then reload StudyFlow. Select **Connect CTU** in the same browser and sign in on the genuine CTU page. The helper reads only on request; it does not collect passwords or change CTU submissions. Use the exact `127.0.0.1:4173` origin.
 
-**Student access update, 19 October:** accounts must verify email and have an active approved-list entry before profile/planner access. In the emulator, use **Send verification email**, open the printed local link, then **Check access again**. Approve your synthetic address in a second terminal with `npm run demo:approve -- student@example.test`. Nothing is seeded or auto-approved. Read [student access setup and recovery](docs/development/STUDENT_ACCESS.md).
+- Known deadlines and upload observations remain after reload. Re-sync updates stable records and preserves personal progress.
+- Add the remaining work estimate and missing planning details to include an assessment in recommendations and the weekly planner.
+- An observed upload and personal completion are distinct states.
+- Timetable PDFs remain links; enter class times manually. Grade book accepts downloaded Result and Progress PDFs.
+- Build Firefox with `npm run build:ctu-helper -- --firefox`. Build success does not certify browser compatibility. Store distribution and Safari support are not in this release.
 
-Ctrl+C stops the app and its emulators together. Do not start a separate emulator alongside `npm run dev:local`. For layout-only work without Java/backend, use `npm run dev:preview`. Advanced separate-terminal workflow remains `npm run emulators` plus `npm run dev:emulator`. Read [Firebase setup](docs/development/FIREBASE.md).
+## Test without touching the real database
 
-## Team and proposed work
+Java 21+ is needed for the Firestore emulator, not an application server.
 
-| Member                | GitHub           | Branch       | Proposed module                                   |
-| --------------------- | ---------------- | ------------ | ------------------------------------------------- |
-| Dewald Van Jaarsveldt | Dewald-vJ        | `dewald`     | Assessments; confirmed team lead                  |
-| Aneesah Rehman        | charming-leather | `aneesah`    | Dashboard/advice/workload; confirmed minute-taker |
-| Riaan Jacobs          | helios5455-cmd   | `riaan`      | Subjects and weekly classes                       |
-| Jandre Van Zyl        | Jandre-van-Zyl   | `jandre`     | Accounts, Firebase/security and shared foundation |
-| Omphemetse Dikeledi   | Theoblac         | `omphemetse` | Weekly planner and study blocks                   |
-
-Technical assignments remain proposals. **Main** has a capital M. Each member merges `origin/Main` into their own branch, builds there, then opens a PR back into Main for another member's review. This is the documented workflow; server-enforced branch protection is not configured. See [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## Stack and structure
-
-One root frontend: **React + TypeScript + Tailwind CSS + Vite**, React Router for navigation, and Firebase's modular web SDK for later Auth/Firestore features. No separate API server, Docker or database server is needed for the UI.
-
-```text
-src/
-  app/                  Routes and bootstrap UI tests
-  features/
-    auth/               Account/authentication work
-    subjects/           Subjects and recurring classes
-    assessments/        Assessment CRUD, status and filters
-    planner/            Week view, study blocks and clashes
-    dashboard/          Priority, workload and overview
-    settings/           Profile and daily study budgets
-  shared/
-    components/         Shared layout and UI
-    types/              Persisted document contracts
-  lib/firebase/         Lazy client and explicit mode/config
-  test/                 Browser-test setup
-firebase/               Local rules, indexes and rule tests
-docs/development/       Setup, architecture, Firebase and day-one tasks
-docs/planning/          Detailed proposed plan, requirements and backlog
-docs/proposal/          Prepared Week 1 PDF
-.github/                CI and pull-request template
+```powershell
+npm run check
+npm test
+npm run build:cloud
+npm run build:ctu-helper
 ```
 
-[Architecture](docs/development/ARCHITECTURE.md) defines module boundaries. [Tomorrow's start plan](docs/development/DAY_ONE.md) gives a small first deliverable per module.
+`check` runs formatting, lint, TypeScript, unit/component tests and a build. `npm test` starts isolated Auth/Firestore emulators under **demo-studyflow**, runs app, rules and integration tests, then stops them. Close other emulator processes first. Neither command deploys Firebase rules or Hosting.
 
-## Commands
+| Command                    | Use                                                      |
+| -------------------------- | -------------------------------------------------------- |
+| `npm run dev`              | Local website, real Firebase backend, port 4173          |
+| `npm run dev:local`        | Disposable local accounts/backend and website, port 5173 |
+| `npm run dev:preview`      | Labelled layout preview without a backend                |
+| `npm run test:unit`        | Fast app tests                                           |
+| `npm run build:cloud`      | Real-backend build in `dist-cloud`; no deployment        |
+| `npm run build:ctu-helper` | Local Chromium helper build                              |
 
-Cloud releases have separate checked build/preview commands and isolated output. Read [the cloud release workflow](docs/development/CLOUD_RELEASE.md) before using them. Local development remains emulator-only; a cloud build does not deploy the app.
+For local accounts, follow [verification and approval](docs/development/STUDENT_ACCESS.md). No account is automatically approved. Ctrl+C stops the local process. Emulator data is disposable; cloud data persists.
 
-| Command                             | Purpose                                                                         |
-| ----------------------------------- | ------------------------------------------------------------------------------- |
-| `npm ci`                            | Install exact versions from package-lock.json                                   |
-| `npm run dev:local`                 | Starts local Auth/Firestore and app; opens login/sign-up; Ctrl+C stops all      |
-| `npm run dev:emulator`              | App only in forced emulator mode; requires a separately running backend         |
-| `npm run dev:preview`               | Layout-only frontend; forces disabled mode, no backend needed                   |
-| `npm run check`                     | Format check, lint, types, unit/UI tests and production build                   |
-| `npm test` / `npm run test:watch`   | Run/watch bootstrap and later feature tests                                     |
-| `npm run format`                    | Format maintained source/config/docs                                            |
-| `npm run build` / `npm run preview` | Build dist / preview on port 4173                                               |
-| `npm run build:cloud`               | Validate explicit cloud configuration and build isolated dist-cloud output      |
-| `npm run preview:cloud`             | Preview the existing cloud release on port 4173; does not rebuild               |
-| `npm run emulators`                 | Optional local Auth/Firestore; Java 21+ required                                |
-| `npm run test:rules`                | Firestore profile ownership/schema and retained feature guards; Java 21+        |
-| `npm run test:integration`          | Real local Auth/profile flows, isolation, revisions and offline saves; Java 21+ |
+## Code and documents
 
-Core checks are also configured for GitHub Actions on Main pushes and PRs targeting Main. Configuration is separate from an actual hosted passing run. Starter tests do not complete the 35 planned capstone acceptance cases.
+| Location                                         | Purpose                                               |
+| ------------------------------------------------ | ----------------------------------------------------- |
+| `src/features/auth`, `settings`                  | Student access, profile, onboarding and daily budgets |
+| `src/features/subjects`, `assessments`           | Subjects/classes and assessment lifecycle             |
+| `src/features/planner`, `dashboard`              | Weekly agenda, clashes, priorities and workload       |
+| `src/features/ctu`, `extensions/ctu-sync`        | Portal collection, source data and planner links      |
+| `src/features/timer`, `grades`                   | Recorded study sessions/reminders and private grades  |
+| `src/shared`, `src/lib/firebase`                 | Shared UI/types and one Firebase client               |
+| `firebase`                                       | Security rules, indexes and isolated backend tests    |
+| `docs/capstone`, `docs/testing`, `docs/evidence` | Member documents, test records and screenshots        |
 
-The production dependency audit is clear at this baseline; the optional Firebase CLI has known development-only audit findings. See [dependency notes](docs/development/DEPENDENCIES.md) for the exact scope and follow-up.
+Read the [final release record](docs/testing/Final_Release_2026-10-28.md), [planner contract](docs/design/Planner_Data_Contract.md), [current data/scope addendum](docs/design/Release_Data_and_Scope_2026-10-28.md), [architecture](docs/development/ARCHITECTURE.md) and [team setup](docs/development/TEAM_TESTING.md). Dated plans/reports preserve earlier checkpoints.
 
-## Firebase and status
+The core includes FR-01–12, a study timer, CTU source linking and a private grade book. Facilitator class management, quizzes, attendance, CSV export, dark mode, automatic PDF timetable parsing and closed-browser reminders are not implemented. Class activities describes the future facilitator scope.
 
-Read [FIREBASE.md](docs/development/FIREBASE.md) and [current cloud setup status](docs/development/CLOUD_PROJECT_STATUS.md). `npm run dev:local` forces local emulators and `npm run dev:preview` forces disabled mode. Explicit cloud builds require complete public web values. Project `studyflow-ctu-capstone` and its web app are registered on Spark; no billing was linked or app deployed. Cloud Authentication/database setup and rollout of verified membership remain pending. Maximum permitted spend is zero.
+## Submission and demonstration
 
-Firestore rules permit valid own-profile access and strictly validated own planner collections. Cross-user/unauthenticated access, unknown collections and hard deletes remain denied. Subject-code claims enforce uniqueness atomically. See the [contract](docs/design/Planner_Data_Contract.md). `.env.local` stays outside Git; never put passwords, service-account JSON or private keys in the frontend.
+Final submission and presentation: **29 October 2026**; confirm the cutoff/slot with the lecturer. Dewald leads; Aneesah takes minutes. The five students are project stakeholders. Preserve each member's actual contribution and evidence.
 
-## Account/profile engineering evidence
-
-- [Account architecture, sequence and data dictionary](docs/design/Accounts_and_Profile_Design.md)
-- [Shared API and developer handoff](docs/development/ACCOUNTS_HANDOFF.md)
-- [Executed tests and browser checks](docs/testing/Jandre_Accounts_Verification_2026-10-16.md)
-
-## Project documents and checkpoints
-
-- [Week 1 proposal](docs/proposal/Group1_Week1.pdf): drafted; submission/approval not verified here.
-- [Full proposed plan](docs/planning/Student_Planner_Full_Project_Plan.md)
-- [Requirements and planned tests](docs/planning/Student_Planner_Requirements_and_Tests.md)
-- [Proposed delivery backlog](docs/planning/Student_Planner_Delivery_Backlog.md)
-
-The three plans preserve the 15 October proposed baseline; README/development notes describe the actual 16 October starter. The five students are the client. Actual requirements evidence, final technical assignments, proposal approval and Firestore assessment fit still need recording.
-
-| Date, Africa/Johannesburg            | Checkpoint                                                                                                                     |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
-| Fri 16 Oct, before morning practical | One-page proposal, once per group by Dewald via Teams to Jabulile Mashibini                                                    |
-| Mon 19 Oct, 12:00                    | Separate Week 2 and Week 3 PDFs together; research, SRS/design and each member's meaningful early commits                      |
-| Mon 26 Oct, cutoff to confirm        | Working Must scope, database, walkthrough, dissertation draft and actual test/evaluation evidence; updated by Jandre on 19 Oct |
-| Thu 29 Oct                           | Final dissertation/source/evidence and live demo; exact cutoff/presentation details still to confirm                           |
-
-Put the repo URL on page 1 from Week 2 onward and arrange accepted assessor access to the private repo. Each member needs genuine feature/test contributions; assistant-assisted setup is not five members' coding evidence.
+The group must assemble its six-chapter dissertation, required testing workbooks, presentation/video, signed contribution forms and official submission. Automated checks do not establish submission or every manual acceptance outcome. Rehearse the exact build using the [release checklist](docs/testing/Final_Release_2026-10-28.md).

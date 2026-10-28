@@ -19,6 +19,84 @@ function open() {
   fireEvent.click(screen.getByRole('button', { name: /Study timer/ }));
 }
 describe('study timer', () => {
+  it('does not transfer a running or paused free timer into a reminded study block', async () => {
+    vi.useFakeTimers();
+    render(
+      <StudyTimer
+        uid="owner"
+        blocks={[
+          {
+            id: 'block-a',
+            assessmentId: 'a',
+            title: 'SE2',
+            startAt: new Date(Date.now() - 60000).toISOString(),
+            endAt: new Date(Date.now() + 14 * 60000).toISOString(),
+            status: 'Planned',
+          },
+        ]}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /^Study timer/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start' }));
+    act(() => {
+      vi.advanceTimersByTime(10000);
+    });
+    expect(screen.getByRole('button', { name: 'Open study timer' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Pause' }));
+    expect(screen.getByRole('button', { name: 'Open study timer' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open study timer' }));
+    expect(screen.getByRole('timer')).toHaveTextContent('15:00');
+    fireEvent.click(screen.getByRole('button', { name: 'Start' }));
+    act(() => {
+      vi.advanceTimersByTime(3000);
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Pause' }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save studied time' }));
+    });
+    expect(saveStudySession).toHaveBeenCalledWith(
+      'owner',
+      expect.any(String),
+      'block-a',
+      3,
+      expect.any(Number),
+      false,
+    );
+  });
+  it('delivers a reminder when the tab becomes hidden and deduplicates only delivered notifications', () => {
+    const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(false);
+    const delivered = vi.fn();
+    class TestNotification {
+      static permission = 'granted';
+      onclick: (() => void) | null = null;
+      constructor(title: string, options: NotificationOptions) {
+        delivered(title, options);
+      }
+      close() {}
+    }
+    vi.stubGlobal('Notification', TestNotification);
+    render(
+      <StudyTimer
+        blocks={[
+          {
+            id: 'block-a',
+            assessmentId: 'a',
+            title: 'SE2',
+            startAt: new Date(Date.now() - 60000).toISOString(),
+            endAt: new Date(Date.now() + 14 * 60000).toISOString(),
+            status: 'Planned',
+          },
+        ]}
+      />,
+    );
+    expect(delivered).not.toHaveBeenCalled();
+    hidden.mockReturnValue(true);
+    fireEvent(document, new Event('visibilitychange'));
+    expect(delivered).toHaveBeenCalledOnce();
+    fireEvent(document, new Event('visibilitychange'));
+    expect(delivered).toHaveBeenCalledOnce();
+  });
   it('reminds for a planned block and records active time only after saving', async () => {
     vi.useFakeTimers();
     const begin = new Date(Date.now() - 60000).toISOString();

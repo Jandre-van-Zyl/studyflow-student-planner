@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from 'react';
-import { Link } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { FormField } from '@/shared/components/FormField';
 import { Modal } from '@/shared/components/Modal';
 import { SuccessCheck } from '@/shared/components/SuccessCheck';
 import { SelectField } from '@/shared/components/SelectField';
 import { SubjectLabel } from '@/shared/components/PlanningUI';
+import { subjectDisplay } from '@/shared/subjectDisplay';
 import { usePlanningPreview } from '@/features/planner/previewContext';
 import { displayDue, type ViewAssessment } from '@/features/planner/planningView';
 import type { AssessmentPriority, AssessmentStatus, AssessmentType } from '@/shared/types/planner';
@@ -13,6 +14,8 @@ import { CtuSavedPanel } from '@/features/ctu/CtuSavedPanel';
 
 export function AssessmentsPage() {
   const { data, day } = usePlanningPreview();
+  const [params, setParams] = useSearchParams();
+  const selectedId = params.get('assessment');
   const { run, busy, error: writeError, preview } = usePlannerMutation();
   const [query, setQuery] = useState('');
   const [subject, setSubject] = useState('');
@@ -23,15 +26,16 @@ export function AssessmentsPage() {
   const [inserted, setInserted] = useState('');
   const canAdd = data.subjects.some((s) => !s.archived);
   const filtered = data.assessments
-    .filter(
-      (item) =>
-        (view === 'archived'
-          ? item.archived
-          : !item.archived &&
-            (view === 'completed' ? item.status === 'Completed' : item.status !== 'Completed')) &&
-        (!subject || item.subjectId === subject) &&
-        (!status || item.status === status) &&
-        (item.title + ' ' + item.description).toLowerCase().includes(query.trim().toLowerCase()),
+    .filter((item) =>
+      selectedId
+        ? item.id === selectedId
+        : (view === 'archived'
+            ? item.archived
+            : !item.archived &&
+              (view === 'completed' ? item.status === 'Completed' : item.status !== 'Completed')) &&
+          (!subject || item.subjectId === subject) &&
+          (!status || item.status === status) &&
+          (item.title + ' ' + item.description).toLowerCase().includes(query.trim().toLowerCase()),
     )
     .sort((a, b) => a.dueAt.localeCompare(b.dueAt) || a.id.localeCompare(b.id));
   async function save(item: ViewAssessment) {
@@ -56,6 +60,16 @@ export function AssessmentsPage() {
       >
         {item.archived ? 'Restore' : 'Archive'}
       </button>
+      {!item.archived &&
+        item.status !== 'Completed' &&
+        data.subjects.some((s) => s.id === item.subjectId && !s.archived) && (
+          <Link
+            className="btn btn-quiet px-2"
+            to={`/planner?assessment=${encodeURIComponent(item.id)}`}
+          >
+            Plan time
+          </Link>
+        )}
     </div>
   );
   return (
@@ -80,7 +94,21 @@ export function AssessmentsPage() {
             Add assessment
           </button>
         </header>
-        {import.meta.env.VITE_CTU_PROTOTYPE === 'true' && <CtuSavedPanel compact unplannedOnly />}
+        {!selectedId && import.meta.env.VITE_CTU_PROTOTYPE === 'true' && (
+          <CtuSavedPanel compact unplannedOnly />
+        )}
+        {selectedId && (
+          <div className="notice mb-5">
+            <p>
+              {filtered.length
+                ? 'Showing the assessment you opened.'
+                : 'This assessment is unavailable in your current account.'}
+            </p>
+            <button className="text-link" onClick={() => setParams({})}>
+              Show all assessments
+            </button>
+          </div>
+        )}
         {!canAdd && (
           <p id="assessment-disabled" className="notice mb-6">
             <Link className="text-link" to="/subjects">
@@ -111,6 +139,7 @@ export function AssessmentsPage() {
               key={value}
               aria-pressed={view === value}
               onClick={() => {
+                setParams({});
                 setView(value);
                 setStatus('');
               }}
@@ -125,18 +154,24 @@ export function AssessmentsPage() {
             label="Search assessments"
             type="search"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setParams({});
+              setQuery(e.target.value);
+            }}
           />
           <SelectField
             id="assessment-subject-filter"
             label="Subject filter"
             value={subject}
-            onChange={(e) => setSubject(e.target.value)}
+            onChange={(e) => {
+              setParams({});
+              setSubject(e.target.value);
+            }}
           >
             <option value="">All subjects</option>
             {data.subjects.map((s) => (
               <option key={s.id} value={s.id}>
-                {s.code}
+                {subjectDisplay(s)}
                 {s.archived ? ' (archived)' : ''}
               </option>
             ))}
@@ -145,7 +180,10 @@ export function AssessmentsPage() {
             id="assessment-status-filter"
             label="Status filter"
             value={status}
-            onChange={(e) => setStatus(e.target.value)}
+            onChange={(e) => {
+              setParams({});
+              setStatus(e.target.value);
+            }}
           >
             <option value="">All statuses</option>
             {['To Do', 'In Progress', 'Completed'].map((s) => (
@@ -166,8 +204,8 @@ export function AssessmentsPage() {
           </button>
         )}
         <p className="help mb-3" aria-live="polite">
-          {filtered.length} {view} assessment{filtered.length === 1 ? '' : 's'} · earliest deadline
-          first
+          {filtered.length} {selectedId ? 'selected' : view} assessment
+          {filtered.length === 1 ? '' : 's'} · earliest deadline first
         </p>
         {!filtered.length ? (
           <div className="empty">
@@ -386,7 +424,7 @@ function AssessmentEditor({
             .filter((s) => !s.archived || s.id === item?.subjectId)
             .map((s) => (
               <option key={s.id} value={s.id}>
-                {s.code} · {s.name}
+                {subjectDisplay(s, true)}
               </option>
             ))}
         </SelectField>

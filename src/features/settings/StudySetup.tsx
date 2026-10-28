@@ -14,7 +14,7 @@ export function StudySetup() {
 
 function StudySetupForm({ uid, profile }: { uid: string; profile: UserProfile }) {
   const navigate = useNavigate();
-  const [base] = useState(profile);
+  const [base, setBase] = useState(profile);
   const [step, setStep] = useState(0);
   const [budgets, setBudgets] = useState<StudyBudgetMinutes>({ ...profile.studyBudgetMinutes });
   const [error, setError] = useState('');
@@ -33,8 +33,17 @@ function StudySetupForm({ uid, profile }: { uid: string; profile: UserProfile })
   }, []);
   const total = Object.values(budgets).reduce((a, b) => a + b, 0);
   const selected = WEEKDAYS.filter(({ key }) => budgets[key] > 0);
+  const hasRemoteChanges =
+    profile.updatedAt.seconds > base.updatedAt.seconds ||
+    (profile.updatedAt.seconds === base.updatedAt.seconds &&
+      profile.updatedAt.nanoseconds > base.updatedAt.nanoseconds);
+  function loadLatest() {
+    setBase(profile);
+    setBudgets({ ...profile.studyBudgetMinutes });
+    setError('');
+  }
   async function finish() {
-    if (locked.current) return;
+    if (locked.current || hasRemoteChanges) return;
     locked.current = true;
     setBusy(true);
     setError('');
@@ -152,6 +161,17 @@ function StudySetupForm({ uid, profile }: { uid: string; profile: UserProfile })
           {error}
         </p>
       )}
+      {hasRemoteChanges && (
+        <div className="notice notice-warning feedback-enter mt-5">
+          <p role="alert">
+            Your profile changed in another session. Your choices are still here. Reload the latest
+            routine before saving; this replaces your unsaved choices.
+          </p>
+          <button type="button" className="text-link mt-3" disabled={busy} onClick={loadLatest}>
+            Reload latest routine
+          </button>
+        </div>
+      )}
       <div className="mt-8 flex items-center justify-between gap-4">
         <button
           className="btn btn-secondary"
@@ -162,7 +182,7 @@ function StudySetupForm({ uid, profile }: { uid: string; profile: UserProfile })
         </button>
         <button
           className="btn btn-primary"
-          disabled={busy}
+          disabled={busy || (step === 2 && hasRemoteChanges)}
           onClick={() => (step < 2 ? setStep(step + 1) : void finish())}
         >
           {busy ? 'Saving your routine…' : step === 2 ? 'Save my routine' : 'Continue'}

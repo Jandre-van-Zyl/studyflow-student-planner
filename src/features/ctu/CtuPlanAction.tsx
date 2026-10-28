@@ -5,6 +5,7 @@ import type { AssessmentType, AssessmentPriority } from '@/shared/types/planner'
 import type { CtuItem } from './ctuImportContract';
 import { planCtuAssessment } from './ctuPlanningService';
 import { isCtuAssignment } from './ctuAssessmentKind';
+import { subjectDisplay } from '@/shared/subjectDisplay';
 
 export function CtuPlanAction({
   uid,
@@ -68,7 +69,7 @@ export function CtuPlanAction({
     return (
       <p role="status" className="mt-3">
         Ready for your planner.{' '}
-        <Link className="text-link" to="/planner">
+        <Link className="text-link" to={`/planner?assessment=ctu-${item.id}`}>
           {type === 'Assignment' ? 'Plan assignment work' : 'Plan study time'}
         </Link>
       </p>
@@ -94,7 +95,7 @@ export function CtuPlanAction({
               .filter((s) => !s.archived)
               .map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.name} ({s.code})
+                  {subjectDisplay(s, true)}
                 </option>
               ))}
           </select>

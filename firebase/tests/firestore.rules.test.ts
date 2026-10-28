@@ -98,7 +98,83 @@ async function linkedSeed() {
   await createSubject();
   await setDoc(doc(owner(), 'users/student-a/assessments/assessment-a'), assessmentData());
 }
+async function privateRecordFixture(kind: 'gradeReports' | 'studySessions') {
+  await linkedSeed();
+  const db = owner();
+  await setDoc(doc(db, 'users/student-a/studyBlocks/block-a'), blockData());
+  const id = kind === 'gradeReports' ? 'a'.repeat(64) : 'session-a';
+  const nextId = kind === 'gradeReports' ? 'b'.repeat(64) : 'session-b';
+  const data =
+    kind === 'gradeReports'
+      ? {
+          course: 'Software Engineer',
+          year: 2026,
+          kind: 'results',
+          payload: '{}',
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        }
+      : {
+          blockId: 'block-a',
+          seconds: 60,
+          startedAt: Timestamp.fromMillis(Date.now() - 120000),
+          createdAt: serverTimestamp(),
+        };
+  const collectionPath = `users/student-a/${kind}`;
+  await assertSucceeds(setDoc(doc(db, collectionPath, id), data));
+  await assertSucceeds(getDoc(doc(db, collectionPath, id)));
+  await assertSucceeds(getDocs(collection(db, collectionPath)));
+  return { db, id, nextId, data, collectionPath };
+}
 describe('planner owner, schema and reference contracts', () => {
+  it.each(['gradeReports', 'studySessions'] as const)(
+    'denies another verified approved student all read/list/create access to private %s',
+    async (kind) => {
+      const { id, nextId, data, collectionPath } = await privateRecordFixture(kind);
+      const other = environment
+        .authenticatedContext('student-b', {
+          email: 'student-b@example.test',
+          email_verified: true,
+        })
+        .firestore();
+      // Give the second account its own valid profile so denial proves ownership,
+      // rather than merely the absence of a profile or membership approval.
+      await assertSucceeds(setDoc(doc(other, 'users/student-b'), validProfile()));
+      await assertFails(getDoc(doc(other, collectionPath, id)));
+      await assertFails(getDocs(collection(other, collectionPath)));
+      await assertFails(setDoc(doc(other, collectionPath, nextId), data));
+      if (kind === 'gradeReports')
+        await assertFails(
+          updateDoc(doc(other, collectionPath, id), {
+            payload: '{"changed":true}',
+            updatedAt: serverTimestamp(),
+          }),
+        );
+      else
+        await assertFails(setDoc(doc(other, 'users/student-b/studySessions/foreign-block'), data));
+    },
+  );
+  it.each(['gradeReports', 'studySessions'] as const)(
+    'revokes existing owner read/list/create access to private %s immediately',
+    async (kind) => {
+      const { db, id, nextId, data, collectionPath } = await privateRecordFixture(kind);
+      await environment.withSecurityRulesDisabled(async (context) => {
+        await updateDoc(doc(context.firestore(), 'approvedStudents/student-a@example.test'), {
+          active: false,
+        });
+      });
+      await assertFails(getDoc(doc(db, collectionPath, id)));
+      await assertFails(getDocs(collection(db, collectionPath)));
+      await assertFails(setDoc(doc(db, collectionPath, nextId), data));
+      if (kind === 'gradeReports')
+        await assertFails(
+          updateDoc(doc(db, collectionPath, id), {
+            payload: '{"changed":true}',
+            updatedAt: serverTimestamp(),
+          }),
+        );
+    },
+  );
   it('allows only private bounded grade reports and preserves report identity', async () => {
     await seed();
     const db = owner();

@@ -149,4 +149,27 @@ describe('shared starter navigation', () => {
     fireEvent.click(screen.getByRole('button', { name: 'active' }));
     expect(screen.getAllByText('Requirements draft').length).toBeGreaterThan(0);
   });
+  it('opens the linked assessment when planning time from the assessment list', () => {
+    renderAt('/assessments');
+    fireEvent.click(screen.getByRole('button', { name: 'Load example week' }));
+    fireEvent.click(screen.getAllByRole('link', { name: 'Plan time' })[0]!);
+    expect(screen.getByRole('dialog', { name: 'Add study block' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Linked assessment')).toHaveDisplayValue('Requirements draft');
+    fireEvent.click(screen.getByRole('button', { name: /^Cancel$/ }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+  it('warns about an over-budget block even when it overlaps nothing', async () => {
+    renderAt('/planner');
+    fireEvent.click(screen.getByRole('button', { name: 'Load example week' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add study block' }));
+    fireEvent.change(screen.getByLabelText('Study title'), { target: { value: 'Evening review' } });
+    fireEvent.change(screen.getByLabelText('Start time (SAST)'), { target: { value: '18:00' } });
+    fireEvent.change(screen.getByLabelText('End time (SAST)'), { target: { value: '18:30' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save study block' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('This day exceeds your study budget');
+    expect(screen.getByRole('alert')).toHaveTextContent('60 minutes over');
+    fireEvent.click(screen.getByRole('button', { name: 'Save over budget' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.getAllByText('Evening review').length).toBeGreaterThan(0);
+  });
 });

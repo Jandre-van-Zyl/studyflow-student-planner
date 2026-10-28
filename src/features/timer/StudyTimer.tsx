@@ -38,16 +38,23 @@ export function StudyTimer({ uid, blocks = [] }: { uid?: string; blocks?: ViewBl
       `${b.id}-${b.startAt}` !== dismissed,
   );
   useEffect(() => {
-    if (!due || !('Notification' in window) || Notification.permission !== 'granted') return;
-    const key = `${due.id}-${due.startAt}`;
-    if (notified.current.has(key)) return;
-    notified.current.add(key);
-    if (document.hidden) {
+    if (!due) return;
+    const notify = () => {
+      if (
+        !document.hidden ||
+        Date.parse(due.endAt) <= Date.now() ||
+        !('Notification' in window) ||
+        Notification.permission !== 'granted'
+      )
+        return;
+      const key = `${due.id}-${due.startAt}`;
+      if (notified.current.has(key)) return;
       try {
         const notice = new Notification('StudyFlow: study time', {
           body: 'Your planned study block is starting. Open StudyFlow to start your timer.',
           tag: key,
         });
+        notified.current.add(key);
         notice.onclick = () => {
           window.focus();
           notice.close();
@@ -55,7 +62,10 @@ export function StudyTimer({ uid, blocks = [] }: { uid?: string; blocks?: ViewBl
       } catch {
         /* Inline reminder remains available. */
       }
-    }
+    };
+    notify();
+    document.addEventListener('visibilitychange', notify);
+    return () => document.removeEventListener('visibilitychange', notify);
   }, [due]);
   const [expanded, setExpanded] = useState(false);
   const [minutes, setMinutes] = useState('25');
@@ -69,6 +79,25 @@ export function StudyTimer({ uid, blocks = [] }: { uid?: string; blocks?: ViewBl
   const opening = useRef(false);
   const valid = /^\d+$/.test(minutes) && Number(minutes) >= 1 && Number(minutes) <= 180;
   const selectedBlock = blocks.find((b) => b.id === blockId);
+  const canSelectBlock = deadline === null && checkpoint === remaining && !saving && !pendingSave;
+  function selectBlock(block?: ViewBlock) {
+    if (!canSelectBlock) return;
+    const length = block
+      ? Math.min(
+          180,
+          Math.max(1, Math.round((Date.parse(block.endAt) - Date.parse(block.startAt)) / 60000)),
+        )
+      : Number(minutes);
+    setBlockId(block?.id ?? '');
+    setMinutes(String(length));
+    setRemaining(length * 60);
+    setCheckpoint(length * 60);
+    setDeadline(null);
+    startedAt.current = 0;
+    sessionId.current = '';
+    setRecorded('');
+    setError('');
+  }
   async function recordTime() {
     const seconds = checkpoint - remaining;
     if (!uid || !selectedBlock || seconds < 1 || savingLock.current || !sessions.ready) return;
@@ -214,23 +243,10 @@ export function StudyTimer({ uid, blocks = [] }: { uid?: string; blocks?: ViewBl
           Study block
           <select
             value={blockId}
-            disabled={deadline !== null || checkpoint !== remaining || saving}
+            disabled={!canSelectBlock}
             onChange={(event) => {
               const block = blocks.find((b) => b.id === event.target.value);
-              setBlockId(event.target.value);
-              setRecorded('');
-              if (block) {
-                const length = Math.min(
-                  180,
-                  Math.max(
-                    1,
-                    Math.round((Date.parse(block.endAt) - Date.parse(block.startAt)) / 60000),
-                  ),
-                );
-                setMinutes(String(length));
-                setRemaining(length * 60);
-                setCheckpoint(length * 60);
-              }
+              selectBlock(block);
             }}
           >
             <option value="">Free timer (not recorded)</option>
@@ -367,19 +383,19 @@ export function StudyTimer({ uid, blocks = [] }: { uid?: string; blocks?: ViewBl
             <p className="help">{due.startAt.slice(11, 16)} SAST · Start when you are ready.</p>
             <button
               className="btn btn-primary mt-2"
+              disabled={!canSelectBlock}
               onClick={() => {
-                const length = Math.round(
-                  (Date.parse(due.endAt) - Date.parse(due.startAt)) / 60000,
-                );
-                setBlockId(due.id);
-                setMinutes(String(length));
-                setRemaining(length * 60);
-                setCheckpoint(length * 60);
+                selectBlock(due);
                 setExpanded(true);
               }}
             >
               Open study timer
             </button>
+            {!canSelectBlock && (
+              <p className="help mt-2">
+                Pause and reset your free timer before starting this study block.
+              </p>
+            )}
             <button
               className="text-link ml-3"
               onClick={() => setDismissed(`${due.id}-${due.startAt}`)}

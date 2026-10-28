@@ -1,4 +1,5 @@
 import { usePlanningPreview } from '@/features/planner/previewContext';
+import { subjectDisplay } from '@/shared/subjectDisplay';
 import { addDays, displayDay, monday, sastDay } from '@/features/planner/planningView';
 
 export function SubjectLabel({ id }: { id: string }) {
@@ -7,7 +8,7 @@ export function SubjectLabel({ id }: { id: string }) {
   return (
     <span className="inline-flex items-center gap-2 text-sm">
       <span className="subject-dot" data-colour={subject?.colour ?? 'teal'} aria-hidden="true" />
-      {subject?.code ?? 'Unknown subject'}
+      {subject ? subjectDisplay(subject) : 'Unknown subject'}
       {subject?.archived ? ' (archived)' : ''}
     </span>
   );

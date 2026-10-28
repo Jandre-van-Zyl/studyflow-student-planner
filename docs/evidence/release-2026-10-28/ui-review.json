@@ -1,0 +1,55 @@
+{
+  "contract": "Preserve StudyFlow's existing CTU burgundy/navy/light-paper design. Use module names, prominent due dates, clear uploaded/completed states, functional planning links and restrained motion. Inspect desktop 1366x900, tablet 768x1024 and phone 360x800. No invented production statistics or new facilitator scope.",
+  "targetViewports": ["1366x900", "768x1024", "360x800"],
+  "accessibility": {
+    "status": "pass",
+    "evidence": "Inspected visible labels and text alongside colour/status cues. Enter opened the mobile menu and activated navigation/profile save; modal and onboarding heading focus were observed. Reduced-motion override reviewed in CSS. These bounded checks do not certify WCAG or a complete screen-reader/OS reduced-motion audit."
+  },
+  "responsive": {
+    "status": "pass",
+    "evidence": "Rendered desktop dashboard, tablet grades, phone assessments/settings/planner. DOM widths were 1366 at 1366 viewport, 753 at 768, and 345 at 360. No page-level horizontal overflow in these views. Phone planner selected-day control displayed the correct Thursday deadline and 75-minute saved budget."
+  },
+  "contentStates": {
+    "loading": {
+      "status": "pass",
+      "evidence": "Full reload showed Loading your saved planner before server-confirmed data. Saves disabled controls while awaiting the server; no premature success was shown."
+    },
+    "empty": {
+      "status": "pass",
+      "evidence": "Second approved account displayed an empty private planner with its own budgets and an Add an incomplete assessment link; no first-account task or timer total appeared."
+    },
+    "error": {
+      "status": "pass",
+      "evidence": "Incorrect synthetic credentials displayed The email or password is incorrect. without exposing the first account. Error screenshot retained."
+    },
+    "partial": {
+      "status": "pass",
+      "evidence": "Saved CTU source with one planned and one unplanned active assessment displayed distinct source/planner states and an uploaded review path. Grade rows retained a pending module while averaging only numeric Overall marks."
+    },
+    "success": {
+      "status": "pass",
+      "evidence": "CTU plan and recurring class saved. Timer saved 31 seconds and survived reload. Uploaded assignment moved to completed with zero remaining work. Onboarding saved 165 minutes across three selected days."
+    },
+    "permission": {
+      "status": "pass",
+      "evidence": "A verified synthetic account without approvedStudents membership displayed Student approval needed and no planner. Helper absence displayed installation instructions with Connect disabled. Only local emulator approval was changed."
+    }
+  },
+  "renderedEvidence": [
+    {
+      "viewport": "1366x900",
+      "artifact": "dashboard-1366.jpg",
+      "observation": "Synthetic saved CTU deadlines, matching planner links, module names, study budget and priority recommendation."
+    },
+    {
+      "viewport": "768x1024",
+      "artifact": "grades-768.jpg",
+      "observation": "Tablet grade report controls, 81% unweighted numeric average and pending mark separation."
+    },
+    {
+      "viewport": "360x800",
+      "artifact": "assessments-360.jpg",
+      "observation": "Phone CTU planning list and native assessment cards fit the viewport; controls and dates remain readable."
+    }
+  ]
+}

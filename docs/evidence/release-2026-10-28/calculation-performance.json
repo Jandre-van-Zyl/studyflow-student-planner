@@ -1,0 +1,9 @@
+{
+  "date": "2026-10-28",
+  "environment": "win32 / Node v24.19.0",
+  "cpu": "AMD Ryzen 5 9600X 6-Core Processor             ",
+  "method": "Actual planningView ranking plus all seven daily allocations. 200 assessments and 200 blocks; first run cold, nine subsequent warm runs. Excludes UI rendering and Firebase latency.",
+  "milliseconds": [44.026, 45.44, 42.637, 41.962, 57.443, 41.955, 42.469, 70.517, 43.001, 44.139],
+  "thresholdMs": 100,
+  "pass": true
+}

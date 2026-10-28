@@ -6,68 +6,116 @@ import { overallGrades, type GradeReport } from './gradeContract';
 
 export function GradeBookPage() {
   const { user, status } = useAuth();
-  const [reports, setReports] = useState<GradeReport[]>([]);
-  const [year, setYear] = useState(2026);
+  const [savedReports, setSavedReports] = useState<GradeReport[]>([]);
+  const [previews, setPreviews] = useState<GradeReport[]>([]);
+  const [year, setYear] = useState(String(new Date().getFullYear()));
   const [filter, setFilter] = useState('all');
   const [courseFilter, setCourseFilter] = useState('all');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(status === 'ready');
+  const [loadError, setLoadError] = useState('');
+  const [retry, setRetry] = useState(0);
   const active = useRef(true);
+  const generation = useRef(0);
+  const locked = useRef(false);
+  const uid = status === 'ready' ? user?.uid : undefined;
   useEffect(() => {
     active.current = true;
+    generation.current++;
     return () => {
       active.current = false;
     };
-  }, []);
+  }, [uid]);
   useEffect(() => {
-    if (status !== 'ready' || !user) return;
+    if (!uid) return;
     const { database } = getFirebaseServices();
-    return onSnapshot(
-      collection(database, 'users', user.uid, 'gradeReports'),
-      { includeMetadataChanges: true },
-      (snap) => {
-        if (snap.metadata.fromCache || snap.metadata.hasPendingWrites) return;
-        try {
-          setReports(
-            snap.docs.map((row) => validateReport(JSON.parse(String(row.data().payload)))),
-          );
-          setError('');
-        } catch {
-          setError('Saved grade data could not be read. Re-import the reports.');
-        }
-      },
-      () =>
-        setError(
-          'Grade saving is not enabled yet or access is unavailable. You can still preview selected reports locally.',
-        ),
-    );
-  }, [status, user]);
+    let listening = true;
+    const fail = () => {
+      if (!listening) return;
+      clearTimeout(timer);
+      setLoading(false);
+      setLoadError(
+        'Saved grades could not be loaded. Check your connection and retry. You can still preview PDFs.',
+      );
+    };
+    const timer = setTimeout(fail, 15000);
+    let stop = () => {};
+    try {
+      stop = onSnapshot(
+        collection(database, 'users', uid, 'gradeReports'),
+        { includeMetadataChanges: true },
+        (snap) => {
+          if (!listening || snap.metadata.fromCache || snap.metadata.hasPendingWrites) return;
+          clearTimeout(timer);
+          setLoading(false);
+          try {
+            setSavedReports(
+              snap.docs.map((row) => validateReport(JSON.parse(String(row.data().payload)))),
+            );
+            setLoadError('');
+          } catch {
+            setLoadError('Saved grade data could not be read. Re-import the reports.');
+          }
+        },
+        fail,
+      );
+    } catch {
+      fail();
+    }
+    return () => {
+      listening = false;
+      clearTimeout(timer);
+      stop();
+    };
+  }, [uid, retry]);
   async function importFiles(files: FileList | null) {
-    if (!files?.length || busy) return;
+    if (!files?.length || locked.current) return;
+    setMessage('');
+    if (files.length > 10) {
+      setError('Choose at most 10 PDFs at a time. No files from this selection were imported.');
+      return;
+    }
+    const academicYear = Number(year);
+    if (
+      !/^\d{4}$/.test(year) ||
+      !Number.isInteger(academicYear) ||
+      academicYear < 2000 ||
+      academicYear > 2099
+    ) {
+      setError('Enter an academic year from 2000 to 2099 before selecting reports.');
+      return;
+    }
+    locked.current = true;
+    const selectedFiles = Array.from(files);
+    const attempt = generation.current;
+    const isCurrent = () => active.current && generation.current === attempt;
     setBusy(true);
     setError('');
     setMessage('');
     try {
       const { readGradePdf } = await import('./readGradePdf');
       const incoming: GradeReport[] = [];
-      for (const file of Array.from(files).slice(0, 10))
-        incoming.push(await readGradePdf(file, year));
-      if (!active.current) return;
-      setReports((old) => [
-        ...old.filter(
-          (r) =>
-            !incoming.some((n) => n.course === r.course && n.year === r.year && n.kind === r.kind),
-        ),
-        ...incoming,
-      ]);
+      for (const file of selectedFiles) {
+        if (!isCurrent()) return;
+        incoming.push(validateReport(await readGradePdf(file, academicYear)));
+      }
+      if (!isCurrent()) return;
+      const uniqueIncoming = mergeReports([], incoming);
+      setPreviews((old) => mergeReports(old, uniqueIncoming));
       if (!user || status !== 'ready') {
         setMessage('Local preview only. Sign in to save reports.');
         return;
       }
       const { auth, database } = getFirebaseServices();
       const owner = auth.currentUser;
-      for (const report of incoming) {
+      const checkSession = () => {
+        if (!isCurrent() || !owner || owner.uid !== user.uid || auth.currentUser !== owner)
+          throw new Error('Your account or page changed before saving finished.');
+      };
+      for (const report of uniqueIncoming) {
+        checkSession();
         const hash = await crypto.subtle.digest(
           'SHA-256',
           new TextEncoder().encode(`${report.course.toLowerCase()}|${report.year}|${report.kind}`),
@@ -76,10 +124,10 @@ export function GradeBookPage() {
           '',
         );
         const ref = doc(database, 'users', user.uid, 'gradeReports', id);
+        checkSession();
         await runTransaction(database, async (tx) => {
           const old = await tx.get(ref);
-          if (!owner || owner.uid !== user.uid || auth.currentUser !== owner)
-            throw new Error('Your account changed.');
+          checkSession();
           tx.set(ref, {
             course: report.course,
             year: report.year,
@@ -90,20 +138,29 @@ export function GradeBookPage() {
           });
         });
       }
-      if (active.current)
+      if (isCurrent()) {
+        setSavedReports((old) => mergeReports(old, uniqueIncoming));
+        setPreviews((old) =>
+          old.filter(
+            (report) => !uniqueIncoming.some((saved) => reportKey(saved) === reportKey(report)),
+          ),
+        );
         setMessage(
           'Grade reports saved. Re-import a newer report to update this same course and year.',
         );
+      }
     } catch (failure) {
-      if (active.current)
+      if (isCurrent())
         setError(
           (failure instanceof Error ? failure.message : 'Import failed.') +
             ' Any displayed preview is not a confirmed save.',
         );
     } finally {
-      if (active.current) setBusy(false);
+      locked.current = false;
+      if (isCurrent()) setBusy(false);
     }
   }
+  const reports = mergeReports(savedReports, previews);
   const selected = reports
     .filter((r) => courseFilter === 'all' || r.course === courseFilter)
     .map((r) => ({
@@ -140,7 +197,7 @@ export function GradeBookPage() {
             max="2099"
             value={year}
             disabled={busy}
-            onChange={(e) => setYear(Number(e.target.value))}
+            onChange={(e) => setYear(e.target.value)}
           />
         </label>
         <label className="mt-4 block">
@@ -150,11 +207,35 @@ export function GradeBookPage() {
             accept="application/pdf,.pdf"
             multiple
             disabled={busy}
-            onChange={(e) => void importFiles(e.target.files)}
+            onChange={(e) => {
+              const files = e.target.files;
+              void importFiles(files);
+              e.target.value = '';
+            }}
           />
         </label>
         {busy && <p role="status">Reading reports…</p>}
       </div>
+      {loading && (
+        <p role="status" className="notice mt-4">
+          Loading your saved grades…
+        </p>
+      )}
+      {loadError && (
+        <div className="notice mt-4">
+          <p role="alert">{loadError}</p>
+          <button
+            className="btn btn-secondary mt-3"
+            onClick={() => {
+              setLoading(true);
+              setLoadError('');
+              setRetry((value) => value + 1);
+            }}
+          >
+            Retry saved grades
+          </button>
+        </div>
+      )}
       {error && (
         <p role="alert" className="notice mt-4">
           {error}
@@ -205,7 +286,7 @@ export function GradeBookPage() {
         Each numeric module Overall mark counts once. Pending results and component marks are
         excluded. This is not a credit-weighted or official CTU qualification average.
       </p>
-      {!reports.length && (
+      {!reports.length && !loading && (
         <p className="mt-6">
           Import your reports to view grades. No sample or invented marks are shown.
         </p>
@@ -216,13 +297,16 @@ export function GradeBookPage() {
           <p className="help">
             {report.year} · {report.kind === 'results' ? 'Letter of results' : 'Progress report'}
           </p>
+          {previews.some((preview) => reportKey(preview) === reportKey(report)) && (
+            <p className="help mt-2">Import preview · saving has not been confirmed.</p>
+          )}
           <ul className="mt-4 divide-y divide-line">
             {report.rows.map((row, i) => (
               <li className="py-3" key={i}>
                 <div className="flex flex-wrap justify-between gap-3">
                   <p className="font-semibold text-ink">{row.module}</p>
                   <p className="font-semibold text-accent">
-                    {row.mark === null ? 'Pending' : `${row.mark}%`} · {row.status}
+                    {row.mark === null ? row.status || 'Pending' : `${row.mark}% · ${row.status}`}
                   </p>
                 </div>
                 <p className="help">
@@ -235,6 +319,14 @@ export function GradeBookPage() {
       ))}
     </section>
   );
+}
+function reportKey(report: GradeReport) {
+  return `${report.course.toLowerCase()}|${report.year}|${report.kind}`;
+}
+function mergeReports(existing: GradeReport[], incoming: GradeReport[]) {
+  const reports = new Map(existing.map((report) => [reportKey(report), report]));
+  incoming.forEach((report) => reports.set(reportKey(report), report));
+  return [...reports.values()];
 }
 function validateReport(value: unknown): GradeReport {
   const r = value as GradeReport;

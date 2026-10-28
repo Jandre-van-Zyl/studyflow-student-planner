@@ -458,6 +458,60 @@ function readCtu(uid: string) {
   });
 }
 describe('real account-scoped CTU import integration', () => {
+  it('keeps a completed assignment and its completion time through resync, repeated planning and sign-in', async () => {
+    const account = await createAccount();
+    await ensureProfile(account.uid, 'Synthetic Student');
+    const snapshot = ctuFixture();
+    await saveCtuImport(account.uid, snapshot);
+    const source = (await readCtu(account.uid)).items.find((item) => item.kind === 'assessment')!;
+    const choices = {
+      subjectId: '',
+      type: 'Assignment' as const,
+      priority: 'Medium' as const,
+      remainingMinutes: 60,
+      planningTime: '18:00',
+    };
+    const id = await planCtuAssessment(account.uid, source.id, choices);
+    const view = await observePlanner(account.uid);
+    await savePlannerRecord(account.uid, 'assessments', {
+      ...view.assessments[0]!,
+      status: 'Completed',
+      remainingMinutes: 0,
+      description: 'Submitted and checked by the student.',
+    });
+    const reference = doc(live.database, 'users', account.uid, 'assessments', id);
+    const completedAt = (await getDocFromServer(reference)).data()!.completedAt;
+    expect(completedAt).not.toBeNull();
+    snapshot.capturedAt = new Date().toISOString();
+    snapshot.assessments[0]!.title = 'FA1 amended';
+    snapshot.assessments[0]!.due = '2026-10-30T23:30';
+    snapshot.assessments[0]!.submitted = true;
+    await saveCtuImport(account.uid, snapshot);
+    // A later portal snapshot without an upload indicator must not reopen completed work.
+    snapshot.capturedAt = new Date().toISOString();
+    snapshot.assessments[0]!.submitted = false;
+    await saveCtuImport(account.uid, snapshot);
+    await refreshCtuPlans(account.uid);
+    expect(await planCtuAssessment(account.uid, source.id, choices)).toBe(id);
+    await signOut(live.auth);
+    await signInWithEmailAndPassword(live.auth, account.email!, password);
+    const reloaded = await observePlanner(account.uid);
+    expect(reloaded.subjects).toHaveLength(1);
+    expect(reloaded.assessments).toHaveLength(1);
+    expect(reloaded.assessments[0]).toMatchObject({
+      id,
+      title: 'FA1 amended',
+      dueAt: '2026-10-30T23:30:00+02:00',
+      status: 'Completed',
+      remainingMinutes: 0,
+      description: 'Submitted and checked by the student.',
+    });
+    expect((await getDocFromServer(reference)).data()!.completedAt).toEqual(completedAt);
+    const imported = await readCtu(account.uid);
+    expect(imported.items.filter((item) => item.kind === 'assessment')).toHaveLength(1);
+    expect(imported.links).toHaveLength(1);
+    expect(imported.links![0]).toMatchObject({ assessmentId: id, conflict: false });
+  });
   it('serializes competing identifier variants before either can create a duplicate', async () => {
     const account = await createAccount();
     await ensureProfile(account.uid, 'Synthetic Student');

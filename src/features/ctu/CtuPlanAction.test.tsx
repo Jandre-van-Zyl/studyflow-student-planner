@@ -65,7 +65,7 @@ describe('CTU planning activation', () => {
     );
     expect(screen.getByRole('link', { name: 'Plan assignment work' })).toHaveAttribute(
       'href',
-      '/planner',
+      `/planner?assessment=ctu-${item.id}`,
     );
   });
   it('supplies personal choices once and offers the normal planner after server confirmation', async () => {
@@ -89,7 +89,7 @@ describe('CTU planning activation', () => {
     );
     expect(screen.getByRole('link', { name: 'Plan study time' })).toHaveAttribute(
       'href',
-      '/planner',
+      `/planner?assessment=ctu-${item.id}`,
     );
   });
   it('retains input after failure and aborts an unmounted operation', async () => {

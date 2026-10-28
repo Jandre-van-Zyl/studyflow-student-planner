@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { Link } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { FormField } from '@/shared/components/FormField';
 import { SelectField } from '@/shared/components/SelectField';
 import { Modal } from '@/shared/components/Modal';
@@ -28,6 +28,14 @@ import {
 export function PlannerPage() {
   const now = useCurrentTime();
   const { data, day, setDay, budgets } = usePlanningPreview();
+  const [params, setParams] = useSearchParams();
+  const requested = data.assessments.find(
+    (a) =>
+      a.id === params.get('assessment') &&
+      !a.archived &&
+      a.status !== 'Completed' &&
+      data.subjects.some((s) => s.id === a.subjectId && !s.archived),
+  );
   const { user, status: authStatus } = useAuth();
   const recorded = useStudySessions(authStatus === 'ready' ? user?.uid : undefined);
   const weekIds = new Set(
@@ -43,7 +51,13 @@ export function PlannerPage() {
     .filter((row) => weekIds.has(row.blockId))
     .reduce((sum, row) => sum + row.seconds, 0);
   const { run, busy, error: writeError, preview } = usePlannerMutation();
-  const [editing, setEditing] = useState<ViewBlock | 'new' | null>(null);
+  const [editing, setEditing] = useState<ViewBlock | 'new' | null>(() =>
+    requested ? 'new' : null,
+  );
+  function closeEditor() {
+    setEditing(null);
+    setParams({});
+  }
   const [showCancelled, setShowCancelled] = useState(false);
   const [message, setMessage] = useState('');
   const [inserted, setInserted] = useState('');
@@ -57,7 +71,7 @@ export function PlannerPage() {
   async function save(item: ViewBlock) {
     if (!(await run('blocks', item))) return;
     if (!data.blocks.some((block) => block.id === item.id)) setInserted(item.id);
-    setEditing(null);
+    closeEditor();
     setMessage(preview ? 'Study block updated in preview.' : 'Study block saved to your account.');
   }
   function eventView(item: AgendaItem, scope: string) {
@@ -278,7 +292,8 @@ export function PlannerPage() {
         {editing && (
           <BlockEditor
             item={editing === 'new' ? undefined : editing}
-            close={() => setEditing(null)}
+            initialAssessmentId={requested?.id}
+            close={closeEditor}
             save={save}
             busy={busy}
             writeError={writeError}
@@ -291,12 +306,14 @@ export function PlannerPage() {
 
 function BlockEditor({
   item,
+  initialAssessmentId,
   close,
   save,
   busy,
   writeError,
 }: {
   item?: ViewBlock;
+  initialAssessmentId?: string;
   close: () => void;
   save: (block: ViewBlock) => void;
   busy: boolean;
@@ -320,6 +337,12 @@ function BlockEditor({
         a.status !== 'Completed' &&
         data.subjects.some((s) => s.id === a.subjectId && !s.archived)),
   );
+  const allocatedAfter = (block: ViewBlock) =>
+    allocation(data, block.startAt.slice(0, 10)) -
+    (item && item.status !== 'Cancelled' && item.startAt.slice(0, 10) === block.startAt.slice(0, 10)
+      ? duration(item.startAt, item.endAt)
+      : 0) +
+    duration(block.startAt, block.endAt);
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const values = new FormData(event.currentTarget);
@@ -343,7 +366,11 @@ function BlockEditor({
       return;
     }
     setError('');
-    if (block.status !== 'Cancelled' && blockConflicts(data, block).length) {
+    if (
+      block.status !== 'Cancelled' &&
+      (blockConflicts(data, block).length ||
+        allocatedAfter(block) > budgets[weekday(block.startAt.slice(0, 10))])
+    ) {
       confirmedConflicts.current = fingerprint(block);
       setPending(block);
       return;
@@ -351,15 +378,7 @@ function BlockEditor({
     save(block);
   }
   const conflicts = pending ? blockConflicts(data, pending) : [];
-  const reserved = pending
-    ? allocation(data, pending.startAt.slice(0, 10)) -
-      (item &&
-      item.status !== 'Cancelled' &&
-      item.startAt.slice(0, 10) === pending.startAt.slice(0, 10)
-        ? duration(item.startAt, item.endAt)
-        : 0) +
-      duration(pending.startAt, pending.endAt)
-    : 0;
+  const reserved = pending ? allocatedAfter(pending) : 0;
   return (
     <Modal
       title={item ? 'Edit study block' : 'Add study block'}
@@ -391,7 +410,7 @@ function BlockEditor({
           name="assessment"
           label="Linked assessment"
           required
-          defaultValue={item?.assessmentId}
+          defaultValue={item?.assessmentId ?? initialAssessmentId}
         >
           {choices.map((a) => (
             <option key={a.id} value={a.id}>
@@ -455,10 +474,12 @@ function BlockEditor({
           <div
             ref={warning}
             tabIndex={-1}
-            className="notice notice-warning feedback-enter"
+            className="notice notice-warning feedback-enter border-2 border-warning"
             role="alert"
           >
-            <h3 className="text-warning">This time overlaps</h3>
+            <h3 className="text-warning">
+              {conflicts.length ? 'This time overlaps' : 'This day exceeds your study budget'}
+            </h3>
             <ul className="mt-2 list-disc pl-5">
               {conflicts.map((c) => (
                 <li key={c.kind + ':' + c.id}>
@@ -502,7 +523,7 @@ function BlockEditor({
                   save(pending);
                 }}
               >
-                Save with overlap
+                {conflicts.length ? 'Save with overlap' : 'Save over budget'}
               </button>
             </div>
           </div>

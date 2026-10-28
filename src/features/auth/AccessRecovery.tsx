@@ -65,6 +65,20 @@ export function AccessRecovery() {
           : 'Your verified email must be on the team-approved student list. Ask the project owner to confirm your exact address.'}
       </p>
       <p className="mt-3 break-all text-muted">{auth.user?.email}</p>
+      {verification && (
+        <ol className="mt-5 list-decimal space-y-3 rounded-lg border border-line bg-white py-5 pr-5 pl-10 text-sm">
+          <li>
+            Click <strong>Send verification email</strong> below.
+          </li>
+          <li>
+            Open the StudyFlow email and follow its verification link. Check Junk or Spam if it is
+            missing.
+          </li>
+          <li>
+            Return to this tab and click <strong>Check access again</strong>.
+          </li>
+        </ol>
+      )}
       {auth.mode === 'emulator' && (
         <p className="notice notice-warning mt-4">
           Local demo · Verification links appear in the emulator terminal. Approval must be added to

@@ -9,7 +9,7 @@ No cloud project, account, billing plan or deployment is created by this module.
 Use Node 24.15+ within 24.x (pinned 24.19.0), npm 10/11 and Java 21+. Run npm ci once after updating the branch. At the repository root:
 
 ```powershell
-npm run dev
+npm run dev:local
 ```
 
 This single command starts Auth/Firestore and their UI, waits for readiness, then opens http://127.0.0.1:5173/account for login/sign-up. Register a synthetic account, then use Settings, Subjects, Assessments and Weekly planner. Signed-in records survive browser refresh. Ctrl+C stops the app and backend together. Stop existing servers before running it; do not also start a separate emulator. It forces emulator mode even if `.env.local` contains cloud configuration. No Firebase login, global CLI or firebase init is needed. Never reuse a real password.
@@ -18,7 +18,9 @@ Auth is at 127.0.0.1:9099; Firestore at 127.0.0.1:8080; emulator UI at http://12
 
 ## Modes and sessions
 
-- `npm run dev` manages the local backend and app together, forcing demo-studyflow and opening /account.
+The default `npm run dev` serves port 4173 with the real Firebase project. The local-emulator instructions above use `npm run dev:local`. See [TEAM_TESTING.md](TEAM_TESTING.md).
+
+- `npm run dev:local` manages the local backend and app together, forcing demo-studyflow and opening /account.
 - `npm run dev:emulator` runs only the frontend in forced emulator mode; advanced users may pair it with a separately started `npm run emulators`.
 - `npm run dev:preview` forces disabled mode regardless of local cloud configuration; no backend/account is needed for its labelled layout preview.
 - Cloud mode requires explicit complete public web configuration. A successful local test is not cloud verification.
@@ -65,4 +67,4 @@ Sources: [Firebase Auth](https://firebase.google.com/docs/auth/web/password-auth
 
 # Current team startup — 21 October 2026
 
-Follow [TEAM_TESTING.md](TEAM_TESTING.md): `npm run dev` uses real Firebase from public `.env.cloud`; `npm run test` starts isolated demo-studyflow emulators; `npm run dev:local` is the optional manual emulator UI. Older emulator-first references below are superseded for the default dev command. Teammates need no Firebase administration credentials.
+Follow [TEAM_TESTING.md](TEAM_TESTING.md): `npm run dev:local` uses real Firebase from public `.env.cloud`; `npm run test` starts isolated demo-studyflow emulators; `npm run dev:local` is the optional manual emulator UI. Older emulator-first references below are superseded for the default dev command. Teammates need no Firebase administration credentials.

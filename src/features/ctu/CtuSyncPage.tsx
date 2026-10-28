@@ -172,7 +172,7 @@ export function CtuSyncPage() {
       <h1>Connect CTU</h1>
       <p className="mt-3 max-w-[65ch] leading-7">
         {canSave
-          ? 'Connect CTU to save your modules, known deadlines and resource information to this StudyFlow account. Sign into your own CTU account when the portal opens.'
+          ? 'Bring CampusOnline deadlines, modules and resources into your planner. Sign into your own CTU account when the portal opens; your information saves to this StudyFlow account.'
           : 'Read your modules and deadlines from CampusOnline. Cloud saving is not enabled in this build; collected information stays in this preview.'}
       </p>
       <p className="mt-4 break-words text-sm text-muted">StudyFlow account: {user?.email}</p>
@@ -180,8 +180,36 @@ export function CtuSyncPage() {
         <p role="status" className="text-sm">
           {active.helper
             ? 'Browser helper connected.'
-            : 'Load the local StudyFlow CTU Preview extension in this browser, then reload this page.'}
+            : 'One-time setup: add the StudyFlow CTU Sync helper to this browser.'}
         </p>
+        {!active.helper && (
+          <details className="mt-4 rounded-lg border border-line p-4" open>
+            <summary className="cursor-pointer font-semibold text-ink">
+              Set up the browser helper
+            </summary>
+            <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm">
+              <li>
+                In the StudyFlow project folder, run <code>npm run build:ctu-helper</code>.
+              </li>
+              <li>
+                Open your browser's Extensions page in Chrome, Edge or Opera and turn on Developer
+                mode.
+              </li>
+              <li>
+                Choose <strong>Load unpacked</strong> and select{' '}
+                <code className="break-all">extension-dist/ctu-sync</code> inside the project.
+              </li>
+              <li>
+                Return to StudyFlow at <code className="break-all">http://127.0.0.1:4173</code> and
+                reload this page.
+              </li>
+            </ol>
+            <p className="help mt-3">
+              Already installed? Reload the helper on the Extensions page after an update, then
+              reload StudyFlow. It only collects when you press Connect CTU.
+            </p>
+          </details>
+        )}
         <p className="mt-3 text-sm leading-6">
           Connecting opens a separate CTU tab. Sign in there if asked. The helper reads five
           supported pages, then closes its own tab. Your existing portal tab stays open.
@@ -213,7 +241,7 @@ export function CtuSyncPage() {
         {active.busy && (
           <p role="status" className="mt-4">
             {active.saving
-              ? 'Saving CTU information to your StudyFlow account�'
+              ? 'Saving CTU information to your StudyFlow account…'
               : 'Waiting for CTU and collecting supported pages. Allow up to three minutes; enter any password only on the genuine CTU page.'}
           </p>
         )}
@@ -353,11 +381,8 @@ export function CtuSyncPage() {
           <div className="border-t border-line pt-5">
             <h2>Coverage and limitations</h2>
             <p className="mt-2 text-sm">
-              Preview collected{' '}
-              {new Date(snapshot.capturedAt).toLocaleString('en-ZA', {
-                timeZone: 'Africa/Johannesburg',
-              })}{' '}
-              SAST.
+              These are observations from the supported CTU pages. Missing information is kept
+              separate from your saved plans.
             </p>
             <ul className="mt-3 space-y-2 text-sm">
               {[...snapshot.coverage, ...snapshot.warnings].map((message) => (

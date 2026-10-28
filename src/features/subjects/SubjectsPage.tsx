@@ -3,6 +3,7 @@ import { FormField } from '@/shared/components/FormField';
 import { Modal } from '@/shared/components/Modal';
 import { SelectField } from '@/shared/components/SelectField';
 import { SubjectLabel } from '@/shared/components/PlanningUI';
+import { subjectDisplay } from '@/shared/subjectDisplay';
 import { WEEKDAYS } from '@/features/auth/profileValidation';
 import { usePlanningPreview } from '@/features/planner/previewContext';
 import {
@@ -14,6 +15,7 @@ import {
 } from '@/features/planner/planningView';
 import type { IsoWeekday, SubjectColour } from '@/shared/types/planner';
 import { usePlannerMutation } from '@/features/planner/usePlannerMutation';
+import { validateClassSlot, validateSubject } from './subjectValidation';
 
 export function SubjectsPage() {
   const { data, day } = usePlanningPreview();
@@ -102,13 +104,15 @@ export function SubjectsPage() {
               >
                 <div className="min-w-0">
                   <SubjectLabel id={item.id} />
-                  <h2 className="mt-1 text-lg">{item.name}</h2>
+                  {subjectDisplay(item) !== item.name && (
+                    <h2 className="mt-1 text-lg">{item.name}</h2>
+                  )}
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {!archived && (
                     <button
                       className="btn btn-quiet"
-                      aria-label={`Edit ${item.code}`}
+                      aria-label={`Edit ${subjectDisplay(item)}`}
                       onClick={() => setSubject(item)}
                     >
                       Edit
@@ -116,7 +120,7 @@ export function SubjectsPage() {
                   )}
                   <button
                     className="btn btn-quiet"
-                    aria-label={`${archived ? 'Restore' : 'Archive'} ${item.code}`}
+                    aria-label={`${archived ? 'Restore' : 'Archive'} ${subjectDisplay(item)}`}
                     onClick={() => changeSubject({ ...item, archived: !item.archived })}
                   >
                     {archived ? 'Restore' : 'Archive'}
@@ -246,14 +250,9 @@ function SubjectEditor({
     const values = new FormData(event.currentTarget);
     const name = String(values.get('name')).trim();
     const code = String(values.get('code')).trim().toUpperCase();
-    if (!name || name.length > 80 || !code || code.length > 20) {
-      setError('Enter a subject name (1–80 characters) and code (1–20 characters).');
-      return;
-    }
-    if (subjects.some((s) => s.id !== id && s.code.toUpperCase() === code)) {
-      setError(
-        'That subject code already exists, including archived subjects. Edit or restore it instead.',
-      );
+    const invalid = validateSubject(name, code, id, subjects);
+    if (invalid) {
+      setError(invalid);
       return;
     }
     save({
@@ -355,10 +354,15 @@ function ClassEditor({
     event.preventDefault();
     const values = new FormData(event.currentTarget);
     const get = (key: string) => String(values.get(key));
-    if (!get('subject') || get('end') <= get('start') || get('to') < get('from')) {
-      setError(
-        'Choose a subject, an end time after the start and an active end date on or after the start date.',
-      );
+    const invalid = validateClassSlot(
+      get('subject'),
+      get('start'),
+      get('end'),
+      get('from'),
+      get('to'),
+    );
+    if (invalid) {
+      setError(invalid);
       return;
     }
     save({
@@ -404,7 +408,7 @@ function ClassEditor({
             .filter((s) => !s.archived || s.id === item?.subjectId)
             .map((s) => (
               <option key={s.id} value={s.id}>
-                {s.code} · {s.name}
+                {subjectDisplay(s, true)}
               </option>
             ))}
         </SelectField>

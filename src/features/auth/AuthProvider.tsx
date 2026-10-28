@@ -194,6 +194,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     mounted.current = true;
+    // The ref object is stable for this effect; invalidate its latest generation on cleanup.
+    const accessVersion = accessGeneration;
     let active = true;
     if (initial.mode === 'disabled' || initial.mode === 'invalid')
       return () => {
@@ -233,7 +235,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       stop();
       stopProfile.current();
       stopMembership.current();
-      ++accessGeneration.current;
+      ++accessVersion.current;
     };
   }, [initial.mode, openSession]);
 

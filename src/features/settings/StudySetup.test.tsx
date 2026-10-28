@@ -67,4 +67,44 @@ describe('study routine onboarding', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/could not be reached/);
     expect(screen.getByRole('button', { name: 'Save my routine' })).toBeEnabled();
   });
+  it('retains a draft when another session saves and reloads the latest profile before retry', async () => {
+    const view = render(
+      <MemoryRouter>
+        <StudySetup />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByLabelText('Monday'));
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    fireEvent.change(screen.getByLabelText('Monday'), { target: { value: '90' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    const latest: UserProfile = {
+      ...profile,
+      displayName: 'Updated name',
+      studyBudgetMinutes: { ...defaultStudyBudgets(), 2: 120 },
+      updatedAt: Timestamp.fromMillis(2000),
+    };
+    vi.mocked(useAuth).mockReturnValue({ user: { uid: 'owner' }, profile: latest } as ReturnType<
+      typeof useAuth
+    >);
+    view.rerender(
+      <MemoryRouter>
+        <StudySetup />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText(/1h 30m/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save my routine' })).toBeDisabled();
+    expect(saveProfile).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Reload latest routine' }));
+    expect(screen.getByText(/2h 0m/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save my routine' })).toBeEnabled();
+    vi.mocked(saveProfile).mockResolvedValue(latest);
+    fireEvent.click(screen.getByRole('button', { name: 'Save my routine' }));
+    await waitFor(() =>
+      expect(saveProfile).toHaveBeenCalledWith(
+        'owner',
+        { displayName: latest.displayName, studyBudgetMinutes: latest.studyBudgetMinutes },
+        latest.updatedAt,
+      ),
+    );
+  });
 });

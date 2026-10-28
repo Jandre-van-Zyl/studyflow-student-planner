@@ -32,7 +32,11 @@ export function AppShell() {
       window.scrollTo?.({ top: 0, behavior: 'instant' });
       previousPath.current = location.pathname;
     }
-    document.title = `${navigation.find((item) => item.to === location.pathname)?.label ?? 'Page not found'} · StudyFlow for CTU`;
+    const title =
+      location.pathname === '/study-setup'
+        ? 'Your study routine'
+        : (navigation.find((item) => item.to === location.pathname)?.label ?? 'Page not found');
+    document.title = `${title} · StudyFlow for CTU`;
   }, [location.pathname]);
   useEffect(() => {
     const query = window.matchMedia?.('(min-width: 1024px)');
